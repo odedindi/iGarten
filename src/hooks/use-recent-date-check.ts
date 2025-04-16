@@ -1,27 +1,25 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
+import { isAfter, subMinutes } from "date-fns";
 
-const FIVE_MINUTES = 5 * 60 * 1000; // in milliseconds
 const STORAGE_KEY = "sprout-timestamp";
 
-export function useRecentDateCheck(setNew = false) {
+export function useRecentDateCheck() {
     const [isRecent, setIsRecent] = useState(false);
 
     useEffect(() => {
-        const now = Date.now();
+        const stored = localStorage.getItem(STORAGE_KEY);
+        if (stored) {
+            const storedTime = parseInt(stored, 10);
+            const fiveMinutesAgo = subMinutes(new Date(), 5);
 
-        if (setNew) {
-            localStorage.setItem(STORAGE_KEY, now.toString());
-            setIsRecent(true);
-        } else {
-            const stored = localStorage.getItem(STORAGE_KEY);
-            if (stored) {
-                const storedTime = parseInt(stored, 10);
-                if (now - storedTime < FIVE_MINUTES) {
-                    setIsRecent(true);
-                }
-            }
+            setIsRecent(isAfter(storedTime, fiveMinutesAgo));
         }
-    }, [setNew]);
+    }, []);
 
-    return [isRecent, setIsRecent] as const;
+    const setTimestamp = useCallback(() => {
+        localStorage.setItem(STORAGE_KEY, Date.now().toString());
+        setIsRecent(true);
+    }, []);
+
+    return [isRecent, setTimestamp] as const;
 }

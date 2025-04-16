@@ -26,20 +26,20 @@ export const LoadingScreen = memo(function LoadingScreen({
     minDuration = generateRandom(MIN_RANDOM, MAX_RANDOM, RANDOM_STEP),
 }: LoadingScreenProps) {
     const [isLoading, setIsLoading] = useState(true);
-    const [didShowRecently, setDidShowRecently] = useRecentDateCheck(false);
+    const [didShowRecently, setTimestamp] = useRecentDateCheck();
 
     useEffect(() => {
         // This ensures we show the loader for at least duration milliseconds
         // even if the content loads faster, to prevent flickering
         const timer = setTimeout(() => {
             setIsLoading(false);
-            setDidShowRecently(true);
+            setTimestamp();
         }, minDuration);
 
         return () => {
             clearTimeout(timer);
         };
-    }, [minDuration, setDidShowRecently]);
+    }, [minDuration, setTimestamp]);
 
     if (isLoading && !didShowRecently) {
         return (
