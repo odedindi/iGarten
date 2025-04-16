@@ -1,0 +1,13 @@
+/* TEAM */
+Developer: Oded Winberger
+Contact: odedinid@gmail.com
+Location: Earth
+
+/* SITE */
+Last update: 2025-04-16
+Standards: HTML5, CSS3, TypeScript
+Components: Next.js, React, Tailwind CSS, shadcn/ui
+Software: VS Code, Git
+
+/* THANKS */
+Open Source Community

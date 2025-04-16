@@ -1,0 +1,7 @@
+# Security Policy for iGarten
+Contact: mailto:security@example.com
+Expires: 2025-12-31T23:59:59.000Z
+Preferred-Languages: en
+Canonical: https://iGarten.example.com/.well-known/security.txt
+Policy: https://iGarten.example.com/security-policy
+
