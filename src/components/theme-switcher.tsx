@@ -12,6 +12,7 @@ import {
     DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { Palette, Moon, Sun } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 export function ThemeSwitcher() {
     const { theme, mode, setTheme, toggleMode } = useTheme();
@@ -49,11 +50,11 @@ export function ThemeSwitcher() {
                 {themeOptions.map((option) => (
                     <DropdownMenuItem
                         key={option.name}
-                        className={
-                            theme.name === option.name
-                                ? "bg-accent text-accent-foreground"
-                                : ""
-                        }
+                        className={cn(
+                            "cursor-pointer",
+                            theme.name === option.name &&
+                                "bg-accent text-accent-foreground"
+                        )}
                         onClick={() => {
                             setTheme(option.name);
                             setOpen(false);
