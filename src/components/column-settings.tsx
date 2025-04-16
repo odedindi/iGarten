@@ -13,7 +13,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { type Column, useTaskStore } from "@/lib/task-store";
-import { Settings } from "lucide-react";
+import { Grip, Settings } from "lucide-react";
 import {
     DragDropContext,
     Droppable,
@@ -180,9 +180,8 @@ export function ColumnSettings({
                                                         >
                                                             {column.label}
                                                         </Label>
-                                                        <div className="text-muted-foreground text-sm">
-                                                            Drag to reorder
-                                                        </div>
+
+                                                        <Grip className="h-4 w-4 cursor-grab" />
                                                     </div>
                                                 )}
                                             </Draggable>

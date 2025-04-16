@@ -163,7 +163,7 @@ function DataTableComponent<T extends TableData>({
                 <Button
                     variant="ghost"
                     onClick={() => handleSort(columnId)}
-                    className="flex h-auto items-center gap-1 p-0 font-medium"
+                    className="text-foreground flex h-auto items-center gap-1 p-0 font-medium"
                 >
                     {columnLabel}
                     {sortConfig.key === columnId ? (
@@ -246,7 +246,7 @@ function DataTableComponent<T extends TableData>({
         if (totalItems === 0) return null;
 
         return (
-            <div className="mt-4 flex flex-col items-center justify-between gap-4 text-sm sm:flex-row">
+            <div className="mt-4 mb-6 flex flex-col items-center justify-between gap-4 text-sm sm:flex-row">
                 <div className="flex items-center gap-2">
                     <span className="text-muted-foreground">
                         Rows per page:
@@ -259,11 +259,11 @@ function DataTableComponent<T extends TableData>({
                             <SelectValue placeholder={pageSize.toString()} />
                         </SelectTrigger>
                         <SelectContent>
-                            <SelectItem value="5">5</SelectItem>
-                            <SelectItem value="10">10</SelectItem>
-                            <SelectItem value="20">20</SelectItem>
-                            <SelectItem value="50">50</SelectItem>
-                            <SelectItem value="100">100</SelectItem>
+                            {[5, 10, 20, 50].map((size) => (
+                                <SelectItem key={size} value={size.toString()}>
+                                    {size}
+                                </SelectItem>
+                            ))}
                         </SelectContent>
                     </Select>
                 </div>
