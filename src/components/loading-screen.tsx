@@ -2,7 +2,7 @@
 
 import type React from "react";
 
-import { useEffect, useState, memo } from "react";
+import { useEffect, useState, memo, useRef } from "react";
 import { TextAnimate } from "@/components/ui/text-animate";
 import { SproutsLoader } from "./sprout-loader";
 
@@ -25,7 +25,7 @@ export const LoadingScreen = memo(function LoadingScreen({
     minDuration,
 }: LoadingScreenProps) {
     const [isLoading, setIsLoading] = useState(true);
-
+    const didShowOnce = useRef(false);
     const duration =
         minDuration ?? generateRandom(MIN_RANDOM, MAX_RANDOM, RANDOM_STEP);
     useEffect(() => {
@@ -33,6 +33,7 @@ export const LoadingScreen = memo(function LoadingScreen({
         // even if the content loads faster, to prevent flickering
         const timer = setTimeout(() => {
             setIsLoading(false);
+            didShowOnce.current = true;
         }, duration);
 
         return () => {
@@ -40,7 +41,7 @@ export const LoadingScreen = memo(function LoadingScreen({
         };
     }, [duration]);
 
-    if (isLoading) {
+    if (isLoading && !didShowOnce.current) {
         return (
             <SproutsLoader>
                 <TextAnimate
