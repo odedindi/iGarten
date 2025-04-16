@@ -3,23 +3,20 @@
 import { useEffect, useState } from "react";
 import { Task, useTaskStore } from "@/lib/task-store";
 import { TaskForm } from "@/components/task-form";
-import { notFound } from "next/navigation";
+import { notFound, useParams } from "next/navigation";
+import { SproutsLoader } from "@/components/sprout-loader";
 
-export default function EditTaskPage({
-    params,
-}: {
-    params: Promise<{ id: string }>;
-}) {
+export default function EditTaskPage() {
+    const params = useParams<{ id: string }>();
     const { getTask } = useTaskStore();
-    const [state, setState] = useState<Task | undefined>();
+    const [task, setTask] = useState<Task | undefined>();
 
     useEffect(() => {
         const fetchTask = async () => {
-            const { id } = await params;
-            const task = getTask(id);
+            const data = getTask(params.id);
 
-            setState(task);
-            if (!task && id !== "new") notFound();
+            setTask(data);
+            if (!data && params.id !== "new") notFound();
         };
         fetchTask();
     }, [params, getTask]);
@@ -27,7 +24,7 @@ export default function EditTaskPage({
     return (
         <div className="mx-auto max-w-4xl">
             <h1 className="mb-6 text-3xl font-bold">Edit Task</h1>
-            <TaskForm initialData={state} />
+            {task ? <TaskForm initialData={task} /> : <SproutsLoader />}
         </div>
     );
 }
