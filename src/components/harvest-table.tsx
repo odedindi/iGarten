@@ -325,7 +325,7 @@ export const HarvestTable = memo(function HarvestTable() {
                 message:
                     "No harvests logged yet. Time to reap what you've sown!",
                 buttonText: "Log Your First Harvest",
-                buttonAction: () => router.push("/garden-entry?tab=harvest"),
+                buttonAction: () => router.push("/?tab=harvest"),
             }}
             getFilterType={getFilterType}
             getFilterOptions={getFilterOptions}

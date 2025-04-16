@@ -351,7 +351,7 @@ export const TaskTable = memo(function TaskTable() {
             emptyState={{
                 message: "No garden tasks found. Time to start planting!",
                 buttonText: "Add Your First Garden Task",
-                buttonAction: () => router.push("/garden-entry"),
+                buttonAction: () => router.push("/"),
             }}
             getFilterType={getFilterType}
             getFilterOptions={getFilterOptions}

@@ -23,8 +23,6 @@ interface TaskFormProps {
 }
 
 export function TaskForm({ initialData }: TaskFormProps) {
-    console.log("initialData", initialData);
-
     const router = useRouter();
     const { addTask, updateTask } = useTaskStore();
     const [title, setTitle] = useState(initialData?.title || "");

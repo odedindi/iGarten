@@ -2,9 +2,10 @@
 
 import type React from "react";
 
-import { useEffect, useState, memo, useRef } from "react";
+import { useEffect, useState, memo } from "react";
 import { TextAnimate } from "@/components/ui/text-animate";
 import { SproutsLoader } from "./sprout-loader";
+import { useRecentDateCheck } from "@/hooks/use-recent-date-check";
 
 const MIN_RANDOM = 1250;
 const MAX_RANDOM = 2500;
@@ -22,26 +23,25 @@ interface LoadingScreenProps {
 
 export const LoadingScreen = memo(function LoadingScreen({
     children,
-    minDuration,
+    minDuration = generateRandom(MIN_RANDOM, MAX_RANDOM, RANDOM_STEP),
 }: LoadingScreenProps) {
     const [isLoading, setIsLoading] = useState(true);
-    const didShowOnce = useRef(false);
-    const duration =
-        minDuration ?? generateRandom(MIN_RANDOM, MAX_RANDOM, RANDOM_STEP);
+    const [didShowRecently, setDidShowRecently] = useRecentDateCheck(false);
+
     useEffect(() => {
         // This ensures we show the loader for at least duration milliseconds
         // even if the content loads faster, to prevent flickering
         const timer = setTimeout(() => {
             setIsLoading(false);
-            didShowOnce.current = true;
-        }, duration);
+            setDidShowRecently(true);
+        }, minDuration);
 
         return () => {
             clearTimeout(timer);
         };
-    }, [duration]);
+    }, [minDuration, setDidShowRecently]);
 
-    if (isLoading && !didShowOnce.current) {
+    if (isLoading && !didShowRecently) {
         return (
             <SproutsLoader>
                 <TextAnimate
