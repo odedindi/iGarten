@@ -45,7 +45,7 @@ export const LoadingScreen = memo(function LoadingScreen({
             <SproutsLoader>
                 <TextAnimate
                     className="text-emerald-700 dark:text-emerald-300"
-                    text="iGarden 3000..."
+                    text="iGarten..."
                     type="fadeInUp"
                     role="heading"
                 />

@@ -67,9 +67,7 @@ const SidebarContent = memo(function SidebarContent({
     return (
         <>
             <div className="garden-header p-6">
-                <h1 className="text-primary text-2xl font-bold">
-                    iGarden 3000
-                </h1>
+                <h1 className="text-primary text-2xl font-bold">iGarten</h1>
                 <p className="text-muted-foreground text-sm">
                     OIMBY: Only In My Back Yard!
                 </p>

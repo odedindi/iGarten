@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Inter } from "next/font/google";
@@ -18,10 +18,31 @@ const geistMono = Geist_Mono({
     subsets: ["latin"],
 });
 
+export const viewport: Viewport = {
+    width: "device-width",
+    initialScale: 1,
+    viewportFit: "auto",
+    colorScheme: "dark",
+    themeColor: [
+        { media: "(prefers-color-scheme: dark)", color: "#1F1F1F" },
+        { media: "(prefers-color-scheme: light)", color: "#ffffff" },
+    ],
+};
 export const metadata: Metadata = {
-    title: "iGarden 3000 - Digital Garden Management",
+    title: "iGarten - Digital Garden Management",
     description:
         "The opposite of NIMBY, more like OIMBY - Only In My Back Yard! The digital place to aggregate stuff about your garden.",
+    keywords: [
+        "digital garden",
+        "garden management",
+        "plant care",
+        "garden journal",
+        "garden planner",
+        "garden design",
+        "garden community",
+        "gardening tips",
+        "sustainable gardening",
+    ],
 };
 
 export default function RootLayout({
@@ -31,6 +52,12 @@ export default function RootLayout({
 }>) {
     return (
         <html lang="en" suppressHydrationWarning>
+            <head>
+                <meta
+                    name="viewport"
+                    content="width=device-width, initial-scale=1"
+                />
+            </head>
             <body
                 className={`${geistSans.variable} ${geistMono.variable} ${inter.className} antialiased`}
             >
