@@ -14,13 +14,17 @@ import {
 import { Flower2, Sprout } from "lucide-react";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 
+const getActiveTab = (tab: string | null) => {
+    if (tab === "task") return "task";
+    return "harvest";
+};
 export default function GardenEntryPage() {
     const router = useRouter();
 
     const searchParams = useSearchParams();
     const pathname = usePathname();
 
-    const tab = searchParams.get("tab") ?? "harvest";
+    const tab = getActiveTab(searchParams.get("tab"));
     const setTab = useCallback(
         (value: string) => {
             const params = new URLSearchParams(searchParams.toString());
