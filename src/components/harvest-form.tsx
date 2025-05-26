@@ -2,7 +2,7 @@
 
 import type React from "react";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTaskStore, type Harvest } from "@/lib/task-store";
 import { Button } from "@/components/ui/button";
@@ -17,6 +17,8 @@ import {
 import { Label } from "@/components/ui/label";
 import { TipTapEditor } from "@/components/tiptap-editor";
 import { DatePicker } from "./ui/date-picker";
+import { InputSuggestions } from "./ui/input-suggestions";
+import { sortStrings } from "@/lib/utils";
 
 interface HarvestFormProps {
     initialData?: Harvest;
@@ -24,7 +26,7 @@ interface HarvestFormProps {
 
 export function HarvestForm({ initialData }: HarvestFormProps) {
     const router = useRouter();
-    const { addHarvest, updateHarvest } = useTaskStore();
+    const { addHarvest, updateHarvest, harvests } = useTaskStore();
     const [cropName, setCropName] = useState(initialData?.cropName || "");
     const [quantity, setQuantity] = useState(
         initialData?.quantity?.toString() || ""
@@ -39,7 +41,27 @@ export function HarvestForm({ initialData }: HarvestFormProps) {
     const [location, setLocation] = useState(initialData?.location || "");
     const [quality, setQuality] = useState(initialData?.quality || "good");
     const [weather, setWeather] = useState(initialData?.weather || "");
-
+    const { locationOptions, weatherOptions, cropOptions } = useMemo(() => {
+        const locationOptions = new Set<string>();
+        const weatherOptions = new Set<string>();
+        const cropOptions = new Set<string>();
+        for (const harvest of harvests) {
+            if (harvest.location) {
+                locationOptions.add(harvest.location);
+            }
+            if (harvest.weather) {
+                weatherOptions.add(harvest.weather);
+            }
+            if (harvest.cropName) {
+                cropOptions.add(harvest.cropName);
+            }
+        }
+        return {
+            locationOptions: [...locationOptions].sort(sortStrings),
+            weatherOptions: [...weatherOptions].sort(sortStrings),
+            cropOptions: [...cropOptions].sort(sortStrings),
+        };
+    }, [harvests]);
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
 
@@ -67,10 +89,11 @@ export function HarvestForm({ initialData }: HarvestFormProps) {
         <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
                 <Label htmlFor="cropName">Crop Name</Label>
-                <Input
+                <InputSuggestions
                     id="cropName"
+                    suggestions={cropOptions}
                     value={cropName}
-                    onChange={(e) => setCropName(e.target.value)}
+                    onChange={setCropName}
                     placeholder="E.g., Tomatoes, Carrots, Basil"
                     required
                     className="garden-input"
@@ -122,10 +145,11 @@ export function HarvestForm({ initialData }: HarvestFormProps) {
 
                 <div className="space-y-2">
                     <Label htmlFor="location">Garden Location</Label>
-                    <Input
+                    <InputSuggestions
                         id="location"
+                        suggestions={locationOptions}
                         value={location}
-                        onChange={(e) => setLocation(e.target.value)}
+                        onChange={setLocation}
                         placeholder="E.g., North bed, Greenhouse, Pot #3"
                         className="garden-input"
                     />
@@ -159,10 +183,11 @@ export function HarvestForm({ initialData }: HarvestFormProps) {
 
                 <div className="space-y-2">
                     <Label htmlFor="weather">Weather</Label>
-                    <Input
+                    <InputSuggestions
                         id="weather"
+                        suggestions={weatherOptions}
                         value={weather}
-                        onChange={(e) => setWeather(e.target.value)}
+                        onChange={setWeather}
                         placeholder="E.g., Sunny, Rainy, Hot"
                         className="garden-input"
                     />

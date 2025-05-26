@@ -2,11 +2,10 @@
 
 import type React from "react";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTaskStore, type Task } from "@/lib/task-store";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import {
     Select,
     SelectContent,
@@ -17,6 +16,9 @@ import {
 import { Label } from "@/components/ui/label";
 import { TipTapEditor } from "@/components/tiptap-editor";
 import { DatePicker } from "./ui/date-picker";
+import { sortStrings } from "@/lib/utils";
+import { InputTagsSuggestions } from "./ui/input-tags-suggestions";
+import { InputSuggestions } from "./ui/input-suggestions";
 
 interface TaskFormProps {
     initialData?: Task;
@@ -24,7 +26,7 @@ interface TaskFormProps {
 
 export function TaskForm({ initialData }: TaskFormProps) {
     const router = useRouter();
-    const { addTask, updateTask } = useTaskStore();
+    const { addTask, updateTask, tasks } = useTaskStore();
     const [title, setTitle] = useState(initialData?.title || "");
     const [description, setDescription] = useState(
         initialData?.description || ""
@@ -38,10 +40,27 @@ export function TaskForm({ initialData }: TaskFormProps) {
     const [priority, setPriority] = useState<Task["priority"]>(
         initialData?.priority || "medium"
     );
-    const [tags, setTags] = useState(
-        initialData?.tags ? initialData.tags.join(", ") : ""
-    );
+    const [tags, setTags] = useState(initialData?.tags ?? []);
 
+    const { titleOptions, tagsOptions } = useMemo(() => {
+        const titleOptions = new Set<string>();
+        const tagsOptions = new Set<string>();
+        for (const task of tasks) {
+            if (task.title) {
+                titleOptions.add(task.title);
+            }
+
+            if (task.tags) {
+                task.tags.forEach((tag) => {
+                    tagsOptions.add(tag);
+                });
+            }
+        }
+        return {
+            titleOptions: [...titleOptions].sort(sortStrings),
+            tagsOptions: [...tagsOptions].sort(sortStrings),
+        };
+    }, [tasks]);
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
 
@@ -52,7 +71,7 @@ export function TaskForm({ initialData }: TaskFormProps) {
             status,
             priority,
             tags: tags
-                .split(",")
+                // .split(",")
                 .map((tag) => tag.trim())
                 .filter(Boolean),
         } as Omit<Task, "id" | "dateCreated">;
@@ -70,10 +89,11 @@ export function TaskForm({ initialData }: TaskFormProps) {
         <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
                 <Label htmlFor="title">Plant/Task Name</Label>
-                <Input
+                <InputSuggestions
                     id="title"
+                    suggestions={titleOptions}
                     value={title}
-                    onChange={(e) => setTitle(e.target.value)}
+                    onChange={setTitle}
                     placeholder="E.g., Plant tomatoes, Prune apple tree"
                     required
                     maxLength={255}
@@ -153,10 +173,11 @@ export function TaskForm({ initialData }: TaskFormProps) {
 
                 <div className="space-y-2">
                     <Label htmlFor="tags">Tags</Label>
-                    <Input
+                    <InputTagsSuggestions
                         id="tags"
+                        suggestions={tagsOptions}
                         value={tags}
-                        onChange={(e) => setTags(e.target.value)}
+                        onChange={setTags}
                         placeholder="E.g., vegetables, fruit, herbs"
                         className="garden-input"
                     />
