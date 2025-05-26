@@ -29,6 +29,7 @@ export default function DashboardPage() {
         demoSettings,
         updateDemoSettings,
         generateDemoData,
+        clearDemoData,
     } = useTaskStore();
     const [timeRange, setTimeRange] = useState<string>("all");
 
@@ -41,6 +42,10 @@ export default function DashboardPage() {
         // If enabling demo mode and no demo data exists, generate it
         if (enabled && (tasks.length === 0 || harvests.length === 0)) {
             generateDemoData();
+        }
+        // If disabling demo mode, clear the demo data
+        if (!enabled) {
+            clearDemoData();
         }
     };
 

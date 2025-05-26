@@ -1,6 +1,8 @@
 import type { Task, Harvest, TaskStatus, TaskPriority } from "./task-store";
 import { addDays, subDays } from "date-fns";
 
+const createMockId = () => `${crypto.randomUUID()}-mock-data`;
+
 // Garden plants and vegetables
 const plants = [
     "Tomatoes",
@@ -200,7 +202,7 @@ export function generateDemoTasks(count = 50): Task[] {
             const action = randomItem(taskTypes);
 
             tasks.push({
-                id: crypto.randomUUID(),
+                id: createMockId(),
                 title: `${action} ${plant}`,
                 description: generateDescription(plant, action),
                 dateCreated: randomDate(oneYearAgo, today),
@@ -222,7 +224,7 @@ export function generateDemoTasks(count = 50): Task[] {
         const action = randomItem(taskTypes);
 
         tasks.push({
-            id: crypto.randomUUID(),
+            id: createMockId(),
             title: `${action} ${plant}`,
             description: generateDescription(plant, action),
             dateCreated: randomDate(oneYearAgo, today),
@@ -338,7 +340,7 @@ export function generateDemoHarvests(count = 40): Harvest[] {
         }
 
         harvests.push({
-            id: crypto.randomUUID(),
+            id: createMockId(),
             cropName: crop,
             quantity: randomNumber(range[0], range[1]),
             unit: unit,

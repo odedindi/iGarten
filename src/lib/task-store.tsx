@@ -67,6 +67,7 @@ interface TaskContextType {
     updateHarvestTableSettings: (settings: Partial<TableSettings>) => void;
     updateDemoSettings: (settings: Partial<DemoSettings>) => void;
     generateDemoData: () => void;
+    clearDemoData: () => void;
 }
 
 const defaultColumns: Column[] = [
@@ -308,10 +309,13 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
         const demoTasks = generateDemoTasks(50);
         const demoHarvests = generateDemoHarvests(40);
 
-        setTasks(demoTasks);
-        setHarvests(demoHarvests);
+        setTasks((prev) => [...demoTasks, ...prev]);
+        setHarvests((prev) => [...demoHarvests, ...prev]);
     };
-
+    const clearDemoData = () => {
+        setTasks((prev) => prev.filter((t) => !t.id.endsWith("mock-data")));
+        setHarvests((prev) => prev.filter((h) => !h.id.endsWith("mock-data")));
+    };
     return (
         <TaskContext.Provider
             value={{
@@ -337,6 +341,7 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
                 updateHarvestTableSettings,
                 updateDemoSettings,
                 generateDemoData,
+                clearDemoData,
             }}
         >
             {children}
