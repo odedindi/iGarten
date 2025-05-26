@@ -102,7 +102,7 @@ const InputTagsSuggestions = React.forwardRef<
         <div className="relative w-full">
             <div
                 className={cn(
-                    "flex w-full flex-wrap gap-2 rounded-md px-3 text-sm disabled:cursor-not-allowed disabled:opacity-50",
+                    "flex w-full flex-wrap gap-2 rounded-md text-sm disabled:cursor-not-allowed disabled:opacity-50",
                     className
                 )}
             >
