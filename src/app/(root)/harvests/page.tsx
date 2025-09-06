@@ -3,7 +3,7 @@ import { ColumnSettings } from "@/components/column-settings";
 
 export default function HarvestsPage() {
     return (
-        <div className="space-y-6">
+        <div className="container mx-auto space-y-6 overflow-auto p-6">
             <div className="garden-header rounded-lg p-6">
                 <h1 className="text-primary relative z-10 text-3xl font-bold">
                     Harvest Log

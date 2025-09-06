@@ -35,7 +35,7 @@ export default function GardenEntryPage() {
     );
 
     return (
-        <div className="mx-auto max-w-4xl">
+        <div className="container mx-auto max-w-4xl overflow-auto p-6">
             <div className="garden-header mb-6 rounded-lg p-6">
                 <h1 className="text-primary relative z-10 text-3xl font-bold">
                     Garden Journal Entry

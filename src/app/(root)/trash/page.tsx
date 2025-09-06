@@ -271,13 +271,13 @@ export default function TrashPage() {
     }, [selectedHarvests, permanentDeleteHarvest]);
 
     return (
-        <div className="container mx-auto overflow-auto p-6">
-            <div className="mb-6">
-                <h1 className="flex items-center gap-2 text-3xl font-bold">
+        <div className="container mx-auto space-y-6 overflow-auto p-6">
+            <div className="garden-header rounded-lg p-6">
+                <h1 className="text-primary relative z-10 flex items-center gap-2 text-3xl font-bold">
                     <Trash2 className="h-8 w-8" />
                     Garbage Bin
                 </h1>
-                <p className="text-muted-foreground mt-2">
+                <p className="text-muted-foreground relative z-10">
                     Manage your deleted garden entries. You can restore them or
                     delete them permanently.
                 </p>

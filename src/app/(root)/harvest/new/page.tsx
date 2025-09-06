@@ -2,7 +2,7 @@ import { HarvestForm } from "@/components/harvest-form";
 
 export default function NewHarvestPage() {
     return (
-        <div className="mx-auto max-w-4xl">
+        <div className="container mx-auto max-w-4xl overflow-auto p-6">
             <h1 className="mb-6 text-3xl font-bold text-green-700">
                 Log New Harvest
             </h1>

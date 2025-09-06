@@ -22,7 +22,7 @@ export default function EditTaskPage() {
     }, [params, getTask]);
 
     return (
-        <div className="mx-auto max-w-4xl">
+        <div className="container mx-auto max-w-4xl overflow-auto p-6">
             <h1 className="mb-6 text-3xl font-bold">Edit Task</h1>
             {task ? <TaskForm initialData={task} /> : <SproutsLoader />}
         </div>
