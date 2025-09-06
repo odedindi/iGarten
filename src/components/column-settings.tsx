@@ -143,7 +143,7 @@ export function ColumnSettings({
                                 <div
                                     {...provided.droppableProps}
                                     ref={provided.innerRef}
-                                    className="space-y-2"
+                                    className="max-h-[30vh] space-y-2 overflow-auto"
                                 >
                                     {localColumns
                                         .sort((a, b) => a.order - b.order)
