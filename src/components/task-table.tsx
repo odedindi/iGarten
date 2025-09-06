@@ -27,16 +27,29 @@ import {
 import { Edit, MoreHorizontal, Trash } from "lucide-react";
 import { format } from "date-fns";
 import { DataTable } from "@/components/ui/data-table";
+import { RichTextEditorModal } from "@/components/rich-text-editor-modal";
 
 export const TaskTable = memo(function TaskTable() {
     const router = useRouter();
     const { tasks, columns, updateTask, deleteTask, tableSettings } =
         useTaskStore();
+
+    // Filter out deleted tasks
+    const activeTasks = tasks.filter((task) => !task.deleted);
     const [editingCell, setEditingCell] = useState<{
         id: string;
         field: keyof Task;
     } | null>(null);
     const [editValue, setEditValue] = useState<string>("");
+    const [descriptionModal, setDescriptionModal] = useState<{
+        isOpen: boolean;
+        taskId: string;
+        content: string;
+    }>({
+        isOpen: false,
+        taskId: "",
+        content: "",
+    });
 
     const handleEdit = useCallback((task: Task, field: keyof Task) => {
         setEditingCell({ id: task.id, field });
@@ -65,75 +78,110 @@ export const TaskTable = memo(function TaskTable() {
         [deleteTask]
     );
 
-    const formatCellValue = useCallback((task: Task, columnId: string) => {
-        const value = task[columnId as keyof Task];
-
-        if (columnId === "dateCreated" || columnId === "dueDate") {
-            return value ? format(new Date(value as string), "PPP") : "-";
-        }
-
-        if (columnId === "tags" && Array.isArray(value)) {
-            return (
-                <div className="flex flex-wrap gap-1">
-                    {(value as string[]).map((tag, i) => (
-                        <Badge
-                            key={i}
-                            variant="outline"
-                            className="garden-badge"
-                        >
-                            {tag}
-                        </Badge>
-                    ))}
-                </div>
-            );
-        }
-
-        if (columnId === "status") {
-            const statusColors: Record<TaskStatus, string> = {
-                completed: "bg-success/20 text-success",
-                "to-plant": "bg-secondary text-secondary-foreground",
-                growing: "bg-primary/20 text-primary",
-                harvested: "bg-accent text-accent-foreground",
-                failed: "bg-destructive/20 text-destructive",
-            };
-            return (
-                <Badge
-                    className={statusColors[value as TaskStatus]}
-                    variant="outline"
-                >
-                    {value}
-                </Badge>
-            );
-        }
-
-        if (columnId === "priority") {
-            const priorityColors: Record<TaskPriority, string> = {
-                low: "bg-muted text-muted-foreground",
-                medium: "bg-secondary text-secondary-foreground",
-                high: "bg-accent text-accent-foreground",
-                urgent: "bg-destructive/20 text-destructive",
-            };
-            return (
-                <Badge
-                    className={priorityColors[value as TaskPriority]}
-                    variant="outline"
-                >
-                    {value}
-                </Badge>
-            );
-        }
-
-        if (columnId === "description") {
-            return (
-                <div
-                    className="max-w-xs truncate"
-                    dangerouslySetInnerHTML={{ __html: value as string }}
-                />
-            );
-        }
-
-        return value;
+    const handleOpenDescriptionModal = useCallback((task: Task) => {
+        setDescriptionModal({
+            isOpen: true,
+            taskId: task.id,
+            content: task.description,
+        });
     }, []);
+
+    const handleCloseDescriptionModal = useCallback(() => {
+        setDescriptionModal({
+            isOpen: false,
+            taskId: "",
+            content: "",
+        });
+    }, []);
+
+    const handleSaveDescription = useCallback(
+        (content: string) => {
+            updateTask(descriptionModal.taskId, { description: content });
+            handleCloseDescriptionModal();
+        },
+        [descriptionModal.taskId, updateTask, handleCloseDescriptionModal]
+    );
+
+    const formatCellValue = useCallback(
+        (task: Task, columnId: string) => {
+            const value = task[columnId as keyof Task];
+
+            if (columnId === "dateCreated" || columnId === "dueDate") {
+                return value ? format(new Date(value as string), "PPP") : "-";
+            }
+
+            if (columnId === "tags" && Array.isArray(value)) {
+                return (
+                    <div className="flex flex-wrap gap-1">
+                        {(value as string[]).map((tag, i) => (
+                            <Badge
+                                key={i}
+                                variant="outline"
+                                className="garden-badge"
+                            >
+                                {tag}
+                            </Badge>
+                        ))}
+                    </div>
+                );
+            }
+
+            if (columnId === "status") {
+                const statusColors: Record<TaskStatus, string> = {
+                    completed: "bg-success/20 text-success",
+                    "to-plant": "bg-secondary text-secondary-foreground",
+                    growing: "bg-primary/20 text-primary",
+                    harvested: "bg-accent text-accent-foreground",
+                    failed: "bg-destructive/20 text-destructive",
+                };
+                return (
+                    <Badge
+                        className={statusColors[value as TaskStatus]}
+                        variant="outline"
+                    >
+                        {value}
+                    </Badge>
+                );
+            }
+
+            if (columnId === "priority") {
+                const priorityColors: Record<TaskPriority, string> = {
+                    low: "bg-muted text-muted-foreground",
+                    medium: "bg-secondary text-secondary-foreground",
+                    high: "bg-accent text-accent-foreground",
+                    urgent: "bg-destructive/20 text-destructive",
+                };
+                return (
+                    <Badge
+                        className={priorityColors[value as TaskPriority]}
+                        variant="outline"
+                    >
+                        {value}
+                    </Badge>
+                );
+            }
+
+            if (columnId === "description") {
+                return (
+                    <div
+                        className="hover:bg-primary/5 line-clamp-2 cursor-pointer rounded p-1"
+                        onClick={() => handleOpenDescriptionModal(task)}
+                        onKeyDown={(e) => {
+                            if (e.key === "Enter" || e.key === " ") {
+                                handleOpenDescriptionModal(task);
+                            }
+                        }}
+                        role="button"
+                        tabIndex={0}
+                        dangerouslySetInnerHTML={{ __html: value as string }}
+                    />
+                );
+            }
+
+            return value;
+        },
+        [handleOpenDescriptionModal]
+    );
 
     const renderCell = useCallback(
         (task: Task, columnId: string) => {
@@ -254,7 +302,10 @@ export const TaskTable = memo(function TaskTable() {
                 <div
                     className="hover:bg-primary/5 cursor-pointer rounded p-1"
                     onClick={() => {
-                        if (columnId !== "dateCreated") {
+                        if (
+                            columnId !== "dateCreated" &&
+                            columnId !== "description"
+                        ) {
                             handleEdit(task, columnId as keyof Task);
                         }
                     }}
@@ -338,24 +389,33 @@ export const TaskTable = memo(function TaskTable() {
     }, []);
 
     return (
-        <DataTable
-            data={tasks}
-            columns={columns}
-            defaultSortKey="dateCreated"
-            defaultSortDirection="desc"
-            defaultPageSize={10}
-            tableSettings={tableSettings}
-            renderCell={renderCell}
-            renderActions={renderActions}
-            onDelete={handleDeleteTasks}
-            emptyState={{
-                message: "No garden tasks found. Time to start planting!",
-                buttonText: "Add Your First Garden Task",
-                buttonAction: () => router.push("/?tab=task"),
-            }}
-            getFilterType={getFilterType}
-            getFilterOptions={getFilterOptions}
-            tableName="Garden Tasks"
-        />
+        <>
+            <DataTable
+                data={activeTasks}
+                columns={columns}
+                defaultSortKey="dateCreated"
+                defaultSortDirection="desc"
+                defaultPageSize={10}
+                tableSettings={tableSettings}
+                renderCell={renderCell}
+                renderActions={renderActions}
+                onDelete={handleDeleteTasks}
+                emptyState={{
+                    message: "No garden tasks found. Time to start planting!",
+                    buttonText: "Add Your First Garden Task",
+                    buttonAction: () => router.push("/?tab=task"),
+                }}
+                getFilterType={getFilterType}
+                getFilterOptions={getFilterOptions}
+                tableName="Garden Tasks"
+            />
+            <RichTextEditorModal
+                isOpen={descriptionModal.isOpen}
+                onClose={handleCloseDescriptionModal}
+                initialContent={descriptionModal.content}
+                onSave={handleSaveDescription}
+                title="Edit Task Description"
+            />
+        </>
     );
 });

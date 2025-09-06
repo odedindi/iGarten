@@ -22,6 +22,7 @@ import { type Harvest, useTaskStore } from "@/lib/task-store";
 import { Edit, MoreHorizontal, Trash } from "lucide-react";
 import { format } from "date-fns";
 import { DataTable } from "@/components/ui/data-table";
+import { RichTextEditorModal } from "@/components/rich-text-editor-modal";
 
 export const HarvestTable = memo(function HarvestTable() {
     const router = useRouter();
@@ -32,11 +33,23 @@ export const HarvestTable = memo(function HarvestTable() {
         deleteHarvest,
         harvestTableSettings,
     } = useTaskStore();
+
+    // Filter out deleted harvests
+    const activeHarvests = harvests.filter((harvest) => !harvest.deleted);
     const [editingCell, setEditingCell] = useState<{
         id: string;
         field: keyof Harvest;
     } | null>(null);
     const [editValue, setEditValue] = useState<string>("");
+    const [notesModal, setNotesModal] = useState<{
+        isOpen: boolean;
+        harvestId: string;
+        content: string;
+    }>({
+        isOpen: false,
+        harvestId: "",
+        content: "",
+    });
 
     const handleEdit = useCallback((harvest: Harvest, field: keyof Harvest) => {
         setEditingCell({ id: harvest.id, field });
@@ -63,6 +76,30 @@ export const HarvestTable = memo(function HarvestTable() {
             ids.forEach((id) => deleteHarvest(id));
         },
         [deleteHarvest]
+    );
+
+    const handleOpenNotesModal = useCallback((harvest: Harvest) => {
+        setNotesModal({
+            isOpen: true,
+            harvestId: harvest.id,
+            content: harvest.notes,
+        });
+    }, []);
+
+    const handleCloseNotesModal = useCallback(() => {
+        setNotesModal({
+            isOpen: false,
+            harvestId: "",
+            content: "",
+        });
+    }, []);
+
+    const handleSaveNotes = useCallback(
+        (content: string) => {
+            updateHarvest(notesModal.harvestId, { notes: content });
+            handleCloseNotesModal();
+        },
+        [notesModal.harvestId, updateHarvest, handleCloseNotesModal]
     );
 
     const formatCellValue = useCallback(
@@ -214,6 +251,22 @@ export const HarvestTable = memo(function HarvestTable() {
                     />
                 );
             }
+            if (columnId === "notes") {
+                return (
+                    <div
+                        className="hover:bg-primary/5 line-clamp-2 cursor-pointer rounded p-1"
+                        onClick={() => handleOpenNotesModal(harvest)}
+                        onKeyDown={(e) => {
+                            if (e.key === "Enter" || e.key === " ") {
+                                handleOpenNotesModal(harvest);
+                            }
+                        }}
+                        role="button"
+                        tabIndex={0}
+                        dangerouslySetInnerHTML={{ __html: harvest.notes }}
+                    />
+                );
+            }
 
             return (
                 <div
@@ -240,6 +293,7 @@ export const HarvestTable = memo(function HarvestTable() {
             handleSave,
             formatCellValue,
             updateHarvest,
+            handleOpenNotesModal,
         ]
     );
 
@@ -312,24 +366,33 @@ export const HarvestTable = memo(function HarvestTable() {
     }, []);
 
     return (
-        <DataTable
-            data={harvests}
-            columns={harvestColumns}
-            defaultSortKey="dateHarvested"
-            defaultSortDirection="desc"
-            tableSettings={harvestTableSettings}
-            renderCell={renderCell}
-            renderActions={renderActions}
-            onDelete={handleDeleteHarvests}
-            emptyState={{
-                message:
-                    "No harvests logged yet. Time to reap what you've sown!",
-                buttonText: "Log Your First Harvest",
-                buttonAction: () => router.push("/?tab=harvest"),
-            }}
-            getFilterType={getFilterType}
-            getFilterOptions={getFilterOptions}
-            tableName="Harvest Log"
-        />
+        <>
+            <DataTable
+                data={activeHarvests}
+                columns={harvestColumns}
+                defaultSortKey="dateHarvested"
+                defaultSortDirection="desc"
+                tableSettings={harvestTableSettings}
+                renderCell={renderCell}
+                renderActions={renderActions}
+                onDelete={handleDeleteHarvests}
+                emptyState={{
+                    message:
+                        "No harvests logged yet. Time to reap what you've sown!",
+                    buttonText: "Log Your First Harvest",
+                    buttonAction: () => router.push("/?tab=harvest"),
+                }}
+                getFilterType={getFilterType}
+                getFilterOptions={getFilterOptions}
+                tableName="Harvest Log"
+            />
+            <RichTextEditorModal
+                isOpen={notesModal.isOpen}
+                onClose={handleCloseNotesModal}
+                initialContent={notesModal.content}
+                onSave={handleSaveNotes}
+                title="Edit Harvest Notes"
+            />
+        </>
     );
 });

@@ -23,6 +23,8 @@ export interface Task {
     status: TaskStatus;
     priority: TaskPriority;
     tags: string[];
+    deleted?: boolean;
+    deletedAt?: string;
 }
 
 export interface Harvest {
@@ -35,6 +37,8 @@ export interface Harvest {
     location: string;
     quality: "poor" | "average" | "good" | "excellent";
     weather: string;
+    deleted?: boolean;
+    deletedAt?: string;
 }
 
 export interface Column {
@@ -56,11 +60,19 @@ interface TaskContextType {
     addTask: (task: Omit<Task, "id" | "dateCreated">) => void;
     updateTask: (id: string, task: Partial<Task>) => void;
     deleteTask: (id: string) => void;
+    softDeleteTask: (id: string) => void;
+    restoreTask: (id: string) => void;
+    permanentDeleteTask: (id: string) => void;
     getTask: (id: string) => Task | undefined;
+    getDeletedTasks: () => Task[];
     addHarvest: (harvest: Omit<Harvest, "id">) => void;
     updateHarvest: (id: string, harvest: Partial<Harvest>) => void;
     deleteHarvest: (id: string) => void;
+    softDeleteHarvest: (id: string) => void;
+    restoreHarvest: (id: string) => void;
+    permanentDeleteHarvest: (id: string) => void;
     getHarvest: (id: string) => Harvest | undefined;
+    getDeletedHarvests: () => Harvest[];
     updateColumns: (columns: Column[]) => void;
     updateHarvestColumns: (columns: Column[]) => void;
     updateTableSettings: (settings: Partial<TableSettings>) => void;
@@ -254,11 +266,44 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
     };
 
     const deleteTask = (id: string) => {
+        // Use soft delete by default
+        softDeleteTask(id);
+    };
+
+    const softDeleteTask = (id: string) => {
+        setTasks((prev) =>
+            prev.map((task) =>
+                task.id === id
+                    ? {
+                          ...task,
+                          deleted: true,
+                          deletedAt: new Date().toISOString(),
+                      }
+                    : task
+            )
+        );
+    };
+
+    const restoreTask = (id: string) => {
+        setTasks((prev) =>
+            prev.map((task) =>
+                task.id === id
+                    ? { ...task, deleted: false, deletedAt: undefined }
+                    : task
+            )
+        );
+    };
+
+    const permanentDeleteTask = (id: string) => {
         setTasks((prev) => prev.filter((task) => task.id !== id));
     };
 
     const getTask = (id: string) => {
         return tasks.find((task) => task.id === id);
+    };
+
+    const getDeletedTasks = () => {
+        return tasks.filter((task) => task.deleted === true);
     };
 
     const addHarvest = (harvest: Omit<Harvest, "id">) => {
@@ -278,11 +323,44 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
     };
 
     const deleteHarvest = (id: string) => {
+        // Use soft delete by default
+        softDeleteHarvest(id);
+    };
+
+    const softDeleteHarvest = (id: string) => {
+        setHarvests((prev) =>
+            prev.map((harvest) =>
+                harvest.id === id
+                    ? {
+                          ...harvest,
+                          deleted: true,
+                          deletedAt: new Date().toISOString(),
+                      }
+                    : harvest
+            )
+        );
+    };
+
+    const restoreHarvest = (id: string) => {
+        setHarvests((prev) =>
+            prev.map((harvest) =>
+                harvest.id === id
+                    ? { ...harvest, deleted: false, deletedAt: undefined }
+                    : harvest
+            )
+        );
+    };
+
+    const permanentDeleteHarvest = (id: string) => {
         setHarvests((prev) => prev.filter((harvest) => harvest.id !== id));
     };
 
     const getHarvest = (id: string) => {
         return harvests.find((harvest) => harvest.id === id);
+    };
+
+    const getDeletedHarvests = () => {
+        return harvests.filter((harvest) => harvest.deleted === true);
     };
 
     const updateColumns = (newColumns: Column[]) => {
@@ -330,11 +408,19 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
                 addTask,
                 updateTask,
                 deleteTask,
+                softDeleteTask,
+                restoreTask,
+                permanentDeleteTask,
                 getTask,
+                getDeletedTasks,
                 addHarvest,
                 updateHarvest,
                 deleteHarvest,
+                softDeleteHarvest,
+                restoreHarvest,
+                permanentDeleteHarvest,
                 getHarvest,
+                getDeletedHarvests,
                 updateColumns,
                 updateHarvestColumns,
                 updateTableSettings,
