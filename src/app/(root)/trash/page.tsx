@@ -303,7 +303,7 @@ export default function TrashPage() {
 
                 <TabsContent value="tasks" className="mt-6">
                     {deletedTasks.length > 0 && (
-                        <div className="mb-4 flex items-center gap-2">
+                        <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap md:items-center">
                             <Button
                                 variant="outline"
                                 size="sm"
@@ -313,34 +313,36 @@ export default function TrashPage() {
                                             deletedTasks.length
                                     )
                                 }
+                                className="w-full md:w-auto"
                             >
                                 {selectedTasks.length === deletedTasks.length
                                     ? "Deselect All"
                                     : "Select All"}
                             </Button>
-                            {selectedTasks.length > 0 && (
-                                <>
-                                    <Button
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={handleBulkRestoreTasks}
-                                        className="text-green-600"
-                                    >
-                                        <RotateCcw className="mr-2 h-4 w-4" />
-                                        Restore Selected ({selectedTasks.length}
-                                        )
-                                    </Button>
-                                    <Button
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={handleBulkPermanentDeleteTasks}
-                                        className="text-destructive"
-                                    >
-                                        <Trash className="mr-2 h-4 w-4" />
-                                        Delete Forever ({selectedTasks.length})
-                                    </Button>
-                                </>
-                            )}
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={handleBulkRestoreTasks}
+                                className="w-full text-green-600 md:w-auto"
+                                disabled={!selectedTasks.length}
+                            >
+                                <RotateCcw className="mr-2 h-4 w-4" />
+                                Restore Selected{" "}
+                                {selectedTasks.length > 0 &&
+                                    `(${selectedTasks.length})`}
+                            </Button>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={handleBulkPermanentDeleteTasks}
+                                className="text-destructive w-full md:w-auto"
+                                disabled={!selectedTasks.length}
+                            >
+                                <Trash className="mr-2 h-4 w-4" />
+                                Delete Forever{" "}
+                                {selectedTasks.length > 0 &&
+                                    `(${selectedTasks.length})`}
+                            </Button>
                         </div>
                     )}
 
@@ -387,7 +389,7 @@ export default function TrashPage() {
 
                 <TabsContent value="harvests" className="mt-6">
                     {deletedHarvests.length > 0 && (
-                        <div className="mb-4 flex items-center gap-2">
+                        <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
                             <Button
                                 variant="outline"
                                 size="sm"
@@ -397,6 +399,7 @@ export default function TrashPage() {
                                             deletedHarvests.length
                                     )
                                 }
+                                className="w-full sm:w-auto"
                             >
                                 {selectedHarvests.length ===
                                 deletedHarvests.length
@@ -409,7 +412,7 @@ export default function TrashPage() {
                                         variant="outline"
                                         size="sm"
                                         onClick={handleBulkRestoreHarvests}
-                                        className="text-green-600"
+                                        className="w-full text-green-600 sm:w-auto"
                                     >
                                         <RotateCcw className="mr-2 h-4 w-4" />
                                         Restore Selected (
@@ -421,7 +424,7 @@ export default function TrashPage() {
                                         onClick={
                                             handleBulkPermanentDeleteHarvests
                                         }
-                                        className="text-destructive"
+                                        className="text-destructive w-full sm:w-auto"
                                     >
                                         <Trash className="mr-2 h-4 w-4" />
                                         Delete Forever (
