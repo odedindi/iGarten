@@ -5,21 +5,35 @@ import { Button } from "@/components/ui/button";
 import {
     Dialog,
     DialogContent,
+    DialogDescription,
     DialogHeader,
     DialogTitle,
     DialogTrigger,
 } from "@/components/ui/dialog";
-import { Checkbox } from "@/components/ui/checkbox";
+
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { type Column, useTaskStore } from "@/lib/task-store";
-import { Grip, Settings } from "lucide-react";
+import { Settings } from "lucide-react";
+
 import {
-    DragDropContext,
-    Droppable,
-    Draggable,
-    OnDragEndResponder,
-} from "@hello-pangea/dnd";
+    defaultDropAnimationSideEffects,
+    DragEndEvent,
+    DragOverlay,
+    DropAnimation,
+    UniqueIdentifier,
+} from "@dnd-kit/core";
+
+import {
+    SortableContext,
+    rectSortingStrategy,
+    arrayMove,
+} from "@dnd-kit/sortable";
+
+import { createPortal } from "react-dom";
+import { cn } from "@/lib/utils";
+import { ColumnSettingsDndContext } from "./column-settings-dnd-context";
+import { ColumnSettingsDndItem } from "./column-settings-sortable-item";
 
 export function ColumnSettings({
     type = "tasks",
@@ -71,20 +85,42 @@ export function ColumnSettings({
         setOpen(false);
     };
 
-    const onDragEnd: OnDragEndResponder = (result) => {
-        if (!result.destination) return;
+    const [activeId, setActiveId] = useState<UniqueIdentifier | null>(null);
 
-        const items = Array.from(localColumns);
-        const [reorderedItem] = items.splice(result.source.index, 1);
-        items.splice(result.destination.index, 0, reorderedItem);
+    const handleDragEnd = ({ active, over }: DragEndEvent) => {
+        setActiveId(null);
+        if (!over) {
+            return;
+        }
 
-        // Update order property
-        const updatedItems = items.map((item, index) => ({
-            ...item,
-            order: index,
-        }));
+        if (active.id == over.id) {
+            return;
+        }
 
-        setLocalColumns(updatedItems);
+        setLocalColumns((items) =>
+            arrayMove(
+                items,
+                items.findIndex((it) => it.id == active.id),
+                items.findIndex((it) => it.id == over.id)
+            ).map((item, index) => ({
+                ...item,
+                order: index,
+            }))
+        );
+    };
+
+    const getIndex = (id: UniqueIdentifier) =>
+        localColumns.findIndex((c) => c.id === id);
+
+    const activeIndex = activeId != null ? getIndex(activeId) : -1;
+    const dropAnimationConfig: DropAnimation = {
+        sideEffects: defaultDropAnimationSideEffects({
+            styles: {
+                active: {
+                    opacity: "0.5",
+                },
+            },
+        }),
     };
 
     return (
@@ -101,6 +137,12 @@ export function ColumnSettings({
                 </Button>
             </DialogTrigger>
             <DialogContent className="dialog-content sm:max-w-md">
+                <DialogDescription>
+                    Customize your table view by selecting which columns to
+                    display and reordering them with drag-and-drop. You can also
+                    enable or disable sorting and filtering features for your
+                    data tables.
+                </DialogDescription>
                 <DialogHeader>
                     <DialogTitle className="text-primary">
                         {type === "tasks"
@@ -137,60 +179,53 @@ export function ColumnSettings({
                         Select which columns to display and drag to reorder
                         them.
                     </p>
-                    <DragDropContext onDragEnd={onDragEnd}>
-                        <Droppable droppableId="columns">
-                            {(provided) => (
-                                <div
-                                    {...provided.droppableProps}
-                                    ref={provided.innerRef}
-                                    className="max-h-[30vh] space-y-2 overflow-auto"
-                                >
-                                    {localColumns
-                                        .sort((a, b) => a.order - b.order)
-                                        .map((column, index) => (
-                                            <Draggable
-                                                key={column.id}
-                                                draggableId={column.id}
-                                                index={index}
-                                            >
-                                                {(provided) => (
-                                                    <div
-                                                        ref={provided.innerRef}
-                                                        {...provided.draggableProps}
-                                                        {...provided.dragHandleProps}
-                                                        className="garden-input flex items-center space-x-2 rounded-md border p-3"
-                                                    >
-                                                        <Checkbox
-                                                            id={`column-${column.id}`}
-                                                            checked={
-                                                                column.visible
-                                                            }
-                                                            onCheckedChange={(
-                                                                checked
-                                                            ) =>
-                                                                handleVisibilityChange(
-                                                                    column.id,
-                                                                    checked as boolean
-                                                                )
-                                                            }
-                                                        />
-                                                        <Label
-                                                            htmlFor={`column-${column.id}`}
-                                                            className="flex-1 cursor-pointer"
-                                                        >
-                                                            {column.label}
-                                                        </Label>
 
-                                                        <Grip className="h-4 w-4 cursor-grab" />
-                                                    </div>
-                                                )}
-                                            </Draggable>
-                                        ))}
-                                    {provided.placeholder}
-                                </div>
+                    <div className="max-h-[30vh] space-y-2 overflow-auto">
+                        <ColumnSettingsDndContext
+                            onDragCancel={() => setActiveId(null)}
+                            onDragEnd={handleDragEnd}
+                            onDragStart={({ active }) => {
+                                if (!active) return;
+                                setActiveId(active.id);
+                            }}
+                        >
+                            <SortableContext
+                                items={localColumns}
+                                strategy={rectSortingStrategy}
+                            >
+                                {localColumns.map((column) => (
+                                    <ColumnSettingsDndItem
+                                        key={column.id}
+                                        column={column}
+                                        className={cn(
+                                            localColumns[activeIndex]?.id ===
+                                                column.id && "opacity-25"
+                                        )}
+                                        handleVisibilityChange={
+                                            handleVisibilityChange
+                                        }
+                                    />
+                                ))}
+                            </SortableContext>
+                            {createPortal(
+                                <DragOverlay
+                                    adjustScale
+                                    dropAnimation={dropAnimationConfig}
+                                >
+                                    {activeId !== null &&
+                                    !!localColumns[activeIndex] ? (
+                                        <ColumnSettingsDndItem
+                                            column={localColumns[activeIndex]}
+                                            handleVisibilityChange={
+                                                handleVisibilityChange
+                                            }
+                                        />
+                                    ) : null}
+                                </DragOverlay>,
+                                document.body
                             )}
-                        </Droppable>
-                    </DragDropContext>
+                        </ColumnSettingsDndContext>
+                    </div>
                 </div>
                 <div className="flex justify-end">
                     <Button onClick={handleSave} className="garden-button">
