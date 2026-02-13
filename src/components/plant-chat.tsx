@@ -1,37 +1,142 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useTaskStore } from "@/lib/task-store";
 import { buildGardenContext } from "@/lib/ai/garden-context";
-import { loadLocalStorage, saveLocalStorage } from "@/lib/ai/history";
+import {
+    loadChatConversations,
+    saveChatConversations,
+    type ChatConversationRecord,
+    type ChatMessageRecord,
+} from "../lib/ai/history";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Bot, User, Loader2, Send, AlertCircle } from "lucide-react";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
+import {
+    Bot,
+    User,
+    Loader2,
+    Send,
+    AlertCircle,
+    MessageSquarePlus,
+    Trash2,
+} from "lucide-react";
 import ReactMarkdown from "react-markdown";
 
-const CHAT_HISTORY_KEY = "garden_ai_chat_history_v1";
+const MAX_MODEL_MESSAGES = 24;
+const MAX_MODEL_CHARS = 12000;
+const MIN_MESSAGES_TO_KEEP = 6;
 
-interface Message {
-    id: string;
-    role: "user" | "assistant";
-    content: string;
+function createConversation(): ChatConversationRecord {
+    const now = new Date().toISOString();
+    return {
+        id: crypto.randomUUID(),
+        title: "New chat",
+        createdAt: now,
+        updatedAt: now,
+        messages: [],
+    };
+}
+
+function sortConversations(conversations: ChatConversationRecord[]) {
+    return [...conversations].sort((a, b) =>
+        b.updatedAt.localeCompare(a.updatedAt)
+    );
+}
+
+function buildConversationTitle(message: string) {
+    const cleanMessage = message.trim().replace(/\s+/g, " ");
+    if (!cleanMessage) {
+        return "New chat";
+    }
+    return cleanMessage.slice(0, 40);
+}
+
+function buildModelMessageWindow(messages: ChatMessageRecord[]) {
+    const selected: { role: "user" | "assistant"; content: string }[] = [];
+    let totalChars = 0;
+
+    for (let i = messages.length - 1; i >= 0; i -= 1) {
+        const current = messages[i];
+        const nextTotal = totalChars + current.content.length;
+
+        if (selected.length >= MAX_MODEL_MESSAGES) {
+            break;
+        }
+
+        if (
+            selected.length >= MIN_MESSAGES_TO_KEEP &&
+            nextTotal > MAX_MODEL_CHARS
+        ) {
+            break;
+        }
+
+        selected.unshift({ role: current.role, content: current.content });
+        totalChars = nextTotal;
+    }
+
+    return selected;
 }
 
 export function PlantChat() {
     const { tasks, harvests } = useTaskStore();
     const gardenContext = buildGardenContext(tasks, harvests);
     const scrollRef = useRef<HTMLDivElement>(null);
-    const [messages, setMessages] = useState<Message[]>([]);
+    const [conversations, setConversations] = useState<
+        ChatConversationRecord[]
+    >([]);
+    const [activeConversationId, setActiveConversationId] = useState<
+        string | null
+    >(null);
     const [inputValue, setInputValue] = useState("");
     const [isLoading, setIsLoading] = useState(false);
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
     const [historyLoaded, setHistoryLoaded] = useState(false);
 
+    const activeConversation = conversations.find(
+        (conversation) => conversation.id === activeConversationId
+    );
+    const messages = useMemo(
+        () => activeConversation?.messages ?? [],
+        [activeConversation?.messages]
+    );
+
     useEffect(() => {
-        setMessages(loadLocalStorage<Message[]>(CHAT_HISTORY_KEY, []));
-        setHistoryLoaded(true);
+        let cancelled = false;
+
+        const loadHistory = async () => {
+            const loadedConversations = await loadChatConversations();
+            if (cancelled) {
+                return;
+            }
+
+            if (loadedConversations.length === 0) {
+                const initialConversation = createConversation();
+                setConversations([initialConversation]);
+                setActiveConversationId(initialConversation.id);
+            } else {
+                const sortedConversations =
+                    sortConversations(loadedConversations);
+                setConversations(sortedConversations);
+                setActiveConversationId(sortedConversations[0].id);
+            }
+
+            setHistoryLoaded(true);
+        };
+
+        void loadHistory();
+
+        return () => {
+            cancelled = true;
+        };
     }, []);
 
     useEffect(() => {
@@ -39,8 +144,8 @@ export function PlantChat() {
             return;
         }
 
-        saveLocalStorage(CHAT_HISTORY_KEY, messages);
-    }, [messages, historyLoaded]);
+        void saveChatConversations(conversations);
+    }, [conversations, historyLoaded]);
 
     useEffect(() => {
         if (scrollRef.current) {
@@ -48,8 +153,66 @@ export function PlantChat() {
         }
     }, [messages]);
 
+    const upsertConversation = (
+        id: string,
+        updater: (
+            conversation: ChatConversationRecord
+        ) => ChatConversationRecord
+    ) => {
+        setConversations((prev) =>
+            sortConversations(
+                prev.map((conversation) =>
+                    conversation.id === id
+                        ? updater(conversation)
+                        : conversation
+                )
+            )
+        );
+    };
+
+    const createNewConversation = () => {
+        const newConversation = createConversation();
+        setConversations((prev) => [newConversation, ...prev]);
+        setActiveConversationId(newConversation.id);
+        setErrorMessage(null);
+    };
+
     const clearHistory = () => {
-        setMessages([]);
+        if (!activeConversationId) {
+            return;
+        }
+
+        upsertConversation(activeConversationId, (conversation) => ({
+            ...conversation,
+            updatedAt: new Date().toISOString(),
+            messages: [],
+        }));
+        setErrorMessage(null);
+    };
+
+    const deleteConversation = () => {
+        if (!activeConversationId || conversations.length === 0) {
+            return;
+        }
+
+        let nextActiveId: string | null = null;
+
+        setConversations((prev) => {
+            const remaining = prev.filter(
+                (conversation) => conversation.id !== activeConversationId
+            );
+
+            if (remaining.length === 0) {
+                const initialConversation = createConversation();
+                nextActiveId = initialConversation.id;
+                return [initialConversation];
+            }
+
+            nextActiveId = remaining[0].id;
+            return remaining;
+        });
+
+        setActiveConversationId(nextActiveId);
         setErrorMessage(null);
     };
 
@@ -57,29 +220,55 @@ export function PlantChat() {
         e.preventDefault();
         if (!inputValue.trim() || isLoading) return;
 
-        const userMessage: Message = {
+        let conversationId = activeConversationId;
+
+        if (!conversationId) {
+            const initialConversation = createConversation();
+            conversationId = initialConversation.id;
+            setConversations((prev) => [initialConversation, ...prev]);
+            setActiveConversationId(initialConversation.id);
+        }
+
+        if (!conversationId) {
+            return;
+        }
+
+        const currentConversation = conversations.find(
+            (conversation) => conversation.id === conversationId
+        );
+        const currentMessages = currentConversation?.messages ?? [];
+
+        const userMessage: ChatMessageRecord = {
             id: crypto.randomUUID(),
             role: "user",
             content: inputValue,
         };
 
-        setMessages((prev) => [...prev, userMessage]);
+        const nextMessages = [...currentMessages, userMessage];
+        const nextTitle =
+            (currentConversation?.title ?? "New chat") === "New chat" &&
+            currentMessages.length === 0
+                ? buildConversationTitle(userMessage.content)
+                : (currentConversation?.title ?? "New chat");
+
+        upsertConversation(conversationId, (conversation) => ({
+            ...conversation,
+            title: nextTitle,
+            updatedAt: new Date().toISOString(),
+            messages: nextMessages,
+        }));
+
         setInputValue("");
         setIsLoading(true);
         setErrorMessage(null);
 
         try {
+            const messagesForModel = buildModelMessageWindow(nextMessages);
             const response = await fetch("/api/chat", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
-                    messages: [
-                        ...messages.map((m) => ({
-                            role: m.role,
-                            content: m.content,
-                        })),
-                        { role: "user", content: inputValue },
-                    ],
+                    messages: messagesForModel,
                     gardenContext,
                 }),
             });
@@ -101,13 +290,17 @@ export function PlantChat() {
             const decoder = new TextDecoder();
             let assistantContent = "";
 
-            const assistantMessage: Message = {
+            const assistantMessage: ChatMessageRecord = {
                 id: crypto.randomUUID(),
                 role: "assistant",
                 content: "",
             };
 
-            setMessages((prev) => [...prev, assistantMessage]);
+            upsertConversation(conversationId, (conversation) => ({
+                ...conversation,
+                updatedAt: new Date().toISOString(),
+                messages: [...conversation.messages, assistantMessage],
+            }));
 
             if (reader) {
                 while (true) {
@@ -117,13 +310,16 @@ export function PlantChat() {
                     const chunk = decoder.decode(value);
                     assistantContent += chunk;
 
-                    setMessages((prev) =>
-                        prev.map((m) =>
-                            m.id === assistantMessage.id
-                                ? { ...m, content: assistantContent }
-                                : m
-                        )
-                    );
+                    upsertConversation(conversationId, (conversation) => ({
+                        ...conversation,
+                        updatedAt: new Date().toISOString(),
+                        messages: conversation.messages.map(
+                            (message: ChatMessageRecord) =>
+                                message.id === assistantMessage.id
+                                    ? { ...message, content: assistantContent }
+                                    : message
+                        ),
+                    }));
                 }
             }
         } catch (error) {
@@ -142,19 +338,54 @@ export function PlantChat() {
                 <div className="flex items-center justify-between gap-4">
                     <CardTitle className="text-primary flex items-center gap-2">
                         <Bot className="h-5 w-5" />
-                        Chat with Verdia
+                        Chat with Gruno
                     </CardTitle>
-                    {messages.length > 0 && (
+                    <div className="flex items-center gap-2">
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={createNewConversation}
+                            disabled={isLoading}
+                        >
+                            <MessageSquarePlus className="mr-2 h-4 w-4" />
+                            New
+                        </Button>
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={deleteConversation}
+                            disabled={isLoading || conversations.length <= 1}
+                        >
+                            <Trash2 className="h-4 w-4" />
+                        </Button>
                         <Button
                             variant="outline"
                             size="sm"
                             onClick={clearHistory}
-                            disabled={isLoading}
+                            disabled={isLoading || messages.length === 0}
                         >
-                            Clear history
+                            Clear
                         </Button>
-                    )}
+                    </div>
                 </div>
+                <Select
+                    value={activeConversationId ?? undefined}
+                    onValueChange={setActiveConversationId}
+                >
+                    <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Select conversation" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        {conversations.map((conversation) => (
+                            <SelectItem
+                                key={conversation.id}
+                                value={conversation.id}
+                            >
+                                {conversation.title}
+                            </SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
             </CardHeader>
             <CardContent className="flex flex-1 flex-col gap-4">
                 <ScrollArea className="flex-1 pr-4" ref={scrollRef}>
@@ -171,7 +402,7 @@ export function PlantChat() {
                         </div>
                     ) : (
                         <div className="flex flex-col gap-4">
-                            {messages.map((message) => (
+                            {messages.map((message: ChatMessageRecord) => (
                                 <div
                                     key={message.id}
                                     className={`flex items-start gap-3 ${

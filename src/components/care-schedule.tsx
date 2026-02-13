@@ -4,10 +4,11 @@ import { useEffect, useState } from "react";
 import { useTaskStore } from "@/lib/task-store";
 import { buildGardenContext } from "@/lib/ai/garden-context";
 import {
-    loadLocalStorage,
+    loadScheduleHistory,
     prependWithLimit,
-    saveLocalStorage,
-} from "@/lib/ai/history";
+    saveScheduleHistory,
+    type ScheduleHistoryRecord,
+} from "../lib/ai/history";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -26,7 +27,6 @@ import {
 } from "lucide-react";
 import type { TaskPriority } from "@/lib/task-store";
 
-const SCHEDULE_HISTORY_KEY = "garden_ai_schedule_history_v1";
 const MAX_SCHEDULE_HISTORY = 10;
 
 interface GeneratedTask {
@@ -53,10 +53,23 @@ export function CareSchedule() {
     const [historyLoaded, setHistoryLoaded] = useState(false);
 
     useEffect(() => {
-        setHistory(
-            loadLocalStorage<ScheduleHistoryEntry[]>(SCHEDULE_HISTORY_KEY, [])
-        );
-        setHistoryLoaded(true);
+        let cancelled = false;
+
+        const loadHistory = async () => {
+            const loadedHistory = await loadScheduleHistory();
+            if (cancelled) {
+                return;
+            }
+
+            setHistory(loadedHistory as ScheduleHistoryEntry[]);
+            setHistoryLoaded(true);
+        };
+
+        void loadHistory();
+
+        return () => {
+            cancelled = true;
+        };
     }, []);
 
     useEffect(() => {
@@ -64,7 +77,7 @@ export function CareSchedule() {
             return;
         }
 
-        saveLocalStorage(SCHEDULE_HISTORY_KEY, history);
+        void saveScheduleHistory(history as ScheduleHistoryRecord[]);
     }, [history, historyLoaded]);
 
     const handleGenerate = async () => {
