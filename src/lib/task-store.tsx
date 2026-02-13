@@ -179,8 +179,9 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
             }
 
             // Load demo settings from localStorage
-            const storedDemoSettings =
-                localStorage.getItem("garden_demo_settings");
+            const storedDemoSettings = localStorage.getItem(
+                "garden_demo_settings"
+            );
             if (storedDemoSettings) {
                 setDemoSettings(JSON.parse(storedDemoSettings));
             }
