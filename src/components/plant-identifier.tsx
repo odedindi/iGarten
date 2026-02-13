@@ -2,16 +2,16 @@
 
 import { useEffect, useState, useRef } from "react";
 import {
-    loadLocalStorage,
+    loadIdentifyHistory,
     prependWithLimit,
-    saveLocalStorage,
-} from "@/lib/ai/history";
+    saveIdentifyHistory,
+    type IdentifyHistoryRecord,
+} from "../lib/ai/history";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Camera, Upload, Loader2, Leaf } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 
-const IDENTIFY_HISTORY_KEY = "garden_ai_identify_history_v1";
 const MAX_IDENTIFY_HISTORY = 10;
 
 interface IdentifyHistoryEntry {
@@ -32,10 +32,23 @@ export function PlantIdentifier() {
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
-        setHistory(
-            loadLocalStorage<IdentifyHistoryEntry[]>(IDENTIFY_HISTORY_KEY, [])
-        );
-        setHistoryLoaded(true);
+        let cancelled = false;
+
+        const loadHistory = async () => {
+            const loadedHistory = await loadIdentifyHistory();
+            if (cancelled) {
+                return;
+            }
+
+            setHistory(loadedHistory as IdentifyHistoryEntry[]);
+            setHistoryLoaded(true);
+        };
+
+        void loadHistory();
+
+        return () => {
+            cancelled = true;
+        };
     }, []);
 
     useEffect(() => {
@@ -43,7 +56,7 @@ export function PlantIdentifier() {
             return;
         }
 
-        saveLocalStorage(IDENTIFY_HISTORY_KEY, history);
+        void saveIdentifyHistory(history as IdentifyHistoryRecord[]);
     }, [history, historyLoaded]);
 
     const handleFile = (file: File) => {

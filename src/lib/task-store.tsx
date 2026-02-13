@@ -5,6 +5,11 @@ import type React from "react";
 import { createContext, useContext, useEffect, useState } from "react";
 import type { TableSettings, DemoSettings } from "./types";
 import { generateDemoTasks, generateDemoHarvests } from "./demo-data";
+import {
+    loadTasksAndHarvests,
+    persistHarvests,
+    persistTasks,
+} from "./task-persistence";
 
 export type TaskStatus =
     | "completed"
@@ -131,73 +136,82 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
     const [isDataLoaded, setIsDataLoaded] = useState(false);
 
     useEffect(() => {
-        // Load tasks from localStorage
-        const storedTasks = localStorage.getItem("garden_tasks");
-        if (storedTasks) {
-            setTasks(JSON.parse(storedTasks));
-        }
+        let cancelled = false;
 
-        // Load harvests from localStorage
-        const storedHarvests = localStorage.getItem("garden_harvests");
-        if (storedHarvests) {
-            setHarvests(JSON.parse(storedHarvests));
-        }
+        const loadData = async () => {
+            const persistedData = await loadTasksAndHarvests();
 
-        // Load columns from localStorage
-        const storedColumns = localStorage.getItem("garden_columns");
-        if (storedColumns) {
-            setColumns(JSON.parse(storedColumns));
-        }
+            if (cancelled) {
+                return;
+            }
 
-        // Load harvest columns from localStorage
-        const storedHarvestColumns = localStorage.getItem(
-            "garden_harvest_columns"
-        );
-        if (storedHarvestColumns) {
-            setHarvestColumns(JSON.parse(storedHarvestColumns));
-        }
+            setTasks(persistedData.tasks);
+            setHarvests(persistedData.harvests);
 
-        // Load table settings from localStorage
-        const storedTableSettings = localStorage.getItem(
-            "garden_table_settings"
-        );
-        if (storedTableSettings) {
-            setTableSettings(JSON.parse(storedTableSettings));
-        }
+            // Load columns from localStorage
+            const storedColumns = localStorage.getItem("garden_columns");
+            if (storedColumns) {
+                setColumns(JSON.parse(storedColumns));
+            }
 
-        // Load harvest table settings from localStorage
-        const storedHarvestTableSettings = localStorage.getItem(
-            "garden_harvest_table_settings"
-        );
-        if (storedHarvestTableSettings) {
-            setHarvestTableSettings(JSON.parse(storedHarvestTableSettings));
-        }
+            // Load harvest columns from localStorage
+            const storedHarvestColumns = localStorage.getItem(
+                "garden_harvest_columns"
+            );
+            if (storedHarvestColumns) {
+                setHarvestColumns(JSON.parse(storedHarvestColumns));
+            }
 
-        // Load demo settings from localStorage
-        const storedDemoSettings = localStorage.getItem("garden_demo_settings");
-        if (storedDemoSettings) {
-            setDemoSettings(JSON.parse(storedDemoSettings));
-        }
+            // Load table settings from localStorage
+            const storedTableSettings = localStorage.getItem(
+                "garden_table_settings"
+            );
+            if (storedTableSettings) {
+                setTableSettings(JSON.parse(storedTableSettings));
+            }
 
-        setLoaded(true);
+            // Load harvest table settings from localStorage
+            const storedHarvestTableSettings = localStorage.getItem(
+                "garden_harvest_table_settings"
+            );
+            if (storedHarvestTableSettings) {
+                setHarvestTableSettings(JSON.parse(storedHarvestTableSettings));
+            }
 
-        // Mark data as loaded after a short delay
-        setTimeout(() => {
-            setIsDataLoaded(true);
-        }, 300);
+            // Load demo settings from localStorage
+            const storedDemoSettings = localStorage.getItem(
+                "garden_demo_settings"
+            );
+            if (storedDemoSettings) {
+                setDemoSettings(JSON.parse(storedDemoSettings));
+            }
+
+            setLoaded(true);
+
+            // Mark data as loaded after a short delay
+            setTimeout(() => {
+                if (!cancelled) {
+                    setIsDataLoaded(true);
+                }
+            }, 300);
+        };
+
+        void loadData();
+
+        return () => {
+            cancelled = true;
+        };
     }, []);
 
     useEffect(() => {
-        // Save tasks to localStorage when they change
         if (loaded) {
-            localStorage.setItem("garden_tasks", JSON.stringify(tasks));
+            void persistTasks(tasks);
         }
     }, [tasks, loaded]);
 
     useEffect(() => {
-        // Save harvests to localStorage when they change
         if (loaded) {
-            localStorage.setItem("garden_harvests", JSON.stringify(harvests));
+            void persistHarvests(harvests);
         }
     }, [harvests, loaded]);
 
