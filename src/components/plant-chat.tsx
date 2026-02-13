@@ -3,10 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useTaskStore } from "@/lib/task-store";
 import { buildGardenContext } from "@/lib/ai/garden-context";
-import {
-    loadLocalStorage,
-    saveLocalStorage,
-} from "@/lib/ai/history";
+import { loadLocalStorage, saveLocalStorage } from "@/lib/ai/history";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";

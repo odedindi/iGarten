@@ -17,6 +17,12 @@ iGarten is a garden management application that tries to help you track your gar
 - **Responsive Design**: Works on desktop, tablet, and mobile devices
 - **Offline Capability**: All data is stored locally in your browser
 
+## 🤖 AI Features
+
+- **Gardening Chat**: Consult with an AI assistant about gardening tips, plant care, and troubleshooting
+- **Plant Identifier**: Upload photos to identify plants and get detailed care information
+- **Schedule Suggester**: Receive intelligent recommendations for planting and maintenance tasks based on your location and plant types
+
 ## 🚀 Getting Started
 
 ### Prerequisites
