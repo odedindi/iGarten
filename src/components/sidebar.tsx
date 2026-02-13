@@ -13,6 +13,7 @@ import {
     PlusCircle,
     Menu,
     Trash2,
+    Bot,
 } from "lucide-react";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 
@@ -47,6 +48,11 @@ const routes = [
         href: "/dashboard",
         label: "Garden Stats",
         icon: <LayoutDashboard className="mr-2 size-5" />,
+    },
+    {
+        href: "/ai",
+        label: "AI Assistant",
+        icon: <Bot className="mr-2 size-5" />,
     },
     {
         href: "/trash",
