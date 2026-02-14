@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import { useTaskStore } from "@/lib/task-store";
 import { buildGardenContext } from "@/lib/ai/garden-context";
+import { parseAiQuotaHeaders, type AiQuotaState } from "@/lib/ai/rate-limits";
 import {
     loadChatConversations,
     saveChatConversations,
@@ -30,10 +31,17 @@ import {
     Trash2,
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
+import { AiQuotaGarden } from "@/components/ai-quota-garden";
 
 const MAX_MODEL_MESSAGES = 24;
 const MAX_MODEL_CHARS = 12000;
 const MIN_MESSAGES_TO_KEEP = 6;
+const MODEL_PREFERENCE_KEY = "ig-ai-selected-model";
+
+interface ModelOption {
+    id: string;
+    displayName: string;
+}
 
 function createConversation(): ChatConversationRecord {
     const now = new Date().toISOString();
@@ -100,6 +108,10 @@ export function PlantChat() {
     const [isLoading, setIsLoading] = useState(false);
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
     const [historyLoaded, setHistoryLoaded] = useState(false);
+    const [modelsLoading, setModelsLoading] = useState(true);
+    const [availableModels, setAvailableModels] = useState<ModelOption[]>([]);
+    const [selectedModel, setSelectedModel] = useState<string>("");
+    const [quota, setQuota] = useState<AiQuotaState | null>(null);
 
     const activeConversation = conversations.find(
         (conversation) => conversation.id === activeConversationId
@@ -146,6 +158,66 @@ export function PlantChat() {
 
         void saveChatConversations(conversations);
     }, [conversations, historyLoaded]);
+
+    useEffect(() => {
+        let cancelled = false;
+
+        const loadModels = async () => {
+            setModelsLoading(true);
+            try {
+                const response = await fetch(
+                    "/api/chat/models?feature=chat&tier=free",
+                    {
+                        cache: "no-store",
+                    }
+                );
+                if (!response.ok) {
+                    throw new Error("Failed to load models");
+                }
+
+                const data = (await response.json()) as {
+                    models?: ModelOption[];
+                    defaultModel?: string;
+                };
+
+                if (cancelled) {
+                    return;
+                }
+
+                const models = data.models ?? [];
+                setAvailableModels(models);
+
+                const storedModel =
+                    window.localStorage.getItem(MODEL_PREFERENCE_KEY);
+                const preferredModel =
+                    storedModel &&
+                    models.some((model) => model.id === storedModel)
+                        ? storedModel
+                        : (data.defaultModel ?? models[0]?.id ?? "");
+                setSelectedModel(preferredModel);
+            } catch (error) {
+                console.error("Failed loading models", error);
+            } finally {
+                if (!cancelled) {
+                    setModelsLoading(false);
+                }
+            }
+        };
+
+        void loadModels();
+
+        return () => {
+            cancelled = true;
+        };
+    }, []);
+
+    useEffect(() => {
+        if (!selectedModel) {
+            return;
+        }
+
+        window.localStorage.setItem(MODEL_PREFERENCE_KEY, selectedModel);
+    }, [selectedModel]);
 
     useEffect(() => {
         if (scrollRef.current) {
@@ -270,8 +342,15 @@ export function PlantChat() {
                 body: JSON.stringify({
                     messages: messagesForModel,
                     gardenContext,
+                    model: selectedModel || undefined,
                 }),
             });
+
+            setQuota(
+                parseAiQuotaHeaders(response.headers, {
+                    isRateLimited: response.status === 429,
+                })
+            );
 
             if (response.status === 429) {
                 const data = await response.json();
@@ -386,8 +465,25 @@ export function PlantChat() {
                         ))}
                     </SelectContent>
                 </Select>
+                <Select
+                    value={selectedModel || undefined}
+                    onValueChange={setSelectedModel}
+                    disabled={modelsLoading || isLoading}
+                >
+                    <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Select AI model" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        {availableModels.map((model) => (
+                            <SelectItem key={model.id} value={model.id}>
+                                {model.displayName}
+                            </SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
             </CardHeader>
             <CardContent className="flex flex-1 flex-col gap-4">
+                <AiQuotaGarden quota={quota} />
                 <ScrollArea className="flex-1 pr-4" ref={scrollRef}>
                     {messages.length === 0 && !errorMessage ? (
                         <div className="text-muted-foreground flex h-full items-center justify-center text-center">

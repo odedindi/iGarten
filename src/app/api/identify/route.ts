@@ -1,16 +1,22 @@
 import { generateText } from "ai";
-import { visionModel } from "@/lib/ai/config";
+import { DEFAULT_CHAT_MODEL, getChatModel } from "@/lib/ai/config";
 import { IDENTIFY_SYSTEM_PROMPT } from "@/lib/ai/prompts";
+import { extractQuotaHeaders } from "@/lib/ai/rate-limits";
 
 export async function POST(req: Request) {
     const startTime = Date.now();
     console.log("[Identify API] POST request received");
 
     try {
-        const { image } = await req.json();
+        const { image, model } = await req.json();
+        const selectedModel =
+            typeof model === "string" && model.length > 0
+                ? model
+                : DEFAULT_CHAT_MODEL;
 
         console.log("[Identify API] Image provided:", !!image);
         console.log("[Identify API] Image data length:", image?.length ?? 0);
+        console.log("[Identify API] Selected model:", selectedModel);
 
         if (!image) {
             console.log("[Identify API] No image — returning 400");
@@ -27,7 +33,7 @@ export async function POST(req: Request) {
             "[Identify API] Calling Gemini generateText with vision..."
         );
         const result = await generateText({
-            model: visionModel,
+            model: getChatModel(selectedModel),
             system: IDENTIFY_SYSTEM_PROMPT,
             messages: [
                 {
@@ -48,7 +54,11 @@ export async function POST(req: Request) {
 
         return new Response(JSON.stringify({ text: result.text }), {
             status: 200,
-            headers: { "Content-Type": "application/json" },
+            headers: {
+                "Content-Type": "application/json",
+                "x-ig-model": selectedModel,
+                ...extractQuotaHeaders(result.response?.headers),
+            },
         });
     } catch (error) {
         const elapsed = Date.now() - startTime;
