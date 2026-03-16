@@ -1,66 +1,115 @@
 import { streamText } from "ai";
-import { chatModel } from "@/lib/ai/config";
+import { DEFAULT_CHAT_MODEL, getChatModel } from "@/lib/ai/config";
 import { CHAT_SYSTEM_PROMPT } from "@/lib/ai/prompts";
+import { extractQuotaHeaders } from "@/lib/ai/rate-limits";
+
+function extractRetrySeconds(errorMessage: string) {
+    const retryMatch = errorMessage.match(/retry in\s+([\d.]+)s/i);
+    if (!retryMatch) {
+        return null;
+    }
+
+    const seconds = Number(retryMatch[1]);
+    return Number.isFinite(seconds) ? Math.ceil(seconds) : null;
+}
+
+function buildQuotaExceededMessage(retrySeconds: number | null) {
+    if (retrySeconds !== null) {
+        return `Quota exhausted for the selected model. Please retry in about ${retrySeconds}s or switch to another model.`;
+    }
+
+    return "Quota exhausted for the selected model. Please wait and try again or switch to another model.";
+}
 
 export async function POST(req: Request) {
     const startTime = Date.now();
-    console.log("[Chat API] POST request received");
+    let selectedModel = DEFAULT_CHAT_MODEL;
 
     try {
         const body = await req.json();
-        const { messages, gardenContext } = body;
-
-        console.log("[Chat API] Messages count:", messages?.length ?? 0);
-        console.log(
-            "[Chat API] Garden context length:",
-            gardenContext?.length ?? 0
-        );
-        console.log(
-            "[Chat API] Last user message:",
-            messages?.[messages.length - 1]?.content?.slice(0, 100)
-        );
+        const { messages, gardenContext, model } = body;
+        selectedModel =
+            typeof model === "string" && model.length > 0
+                ? model
+                : DEFAULT_CHAT_MODEL;
 
         const systemPrompt = `${CHAT_SYSTEM_PROMPT}\n\n${gardenContext}`;
-
-        console.log("[Chat API] Calling Gemini streamText...");
         const result = streamText({
-            model: chatModel,
+            model: getChatModel(selectedModel),
             system: systemPrompt,
             messages,
-            maxRetries: 5,
+            maxRetries: 1,
+            onError: ({ error }) => {
+                const message =
+                    error instanceof Error ? error.message : String(error);
+                if (
+                    message.includes("429") ||
+                    message.toLowerCase().includes("quota") ||
+                    message.toLowerCase().includes("resource_exhausted")
+                ) {
+                    console.warn(
+                        `[Chat API] Stream quota/rate-limit issue on model ${selectedModel}`
+                    );
+                    return;
+                }
+
+                console.error("[Chat API] Stream error:", message);
+            },
         });
 
-        console.log(`[Chat API] Stream started (${Date.now() - startTime}ms)`);
-        return result.toTextStreamResponse();
+        const providerResponse = await Promise.resolve(result.response).catch(
+            () => null
+        );
+        const quotaHeaders = extractQuotaHeaders(providerResponse?.headers);
+
+        console.log(
+            `[Chat API] Stream started model=${selectedModel} in ${Date.now() - startTime}ms`
+        );
+        return result.toTextStreamResponse({
+            headers: {
+                "x-ig-model": selectedModel,
+                ...quotaHeaders,
+            },
+        });
     } catch (error) {
         const elapsed = Date.now() - startTime;
-        console.error(`[Chat API] ERROR after ${elapsed}ms:`, error);
-
-        if (error instanceof Error) {
-            console.error("[Chat API] Error name:", error.name);
-            console.error("[Chat API] Error message:", error.message);
-            console.error("[Chat API] Error stack:", error.stack);
-            if ("cause" in error) {
-                console.error("[Chat API] Error cause:", error.cause);
-            }
-        }
 
         const errorMessage =
             error instanceof Error ? error.message : String(error);
+        console.error(
+            `[Chat API] ERROR model=${selectedModel} after ${elapsed}ms: ${errorMessage}`
+        );
+
         const isRateLimited =
             errorMessage.includes("429") ||
             errorMessage.toLowerCase().includes("quota") ||
             errorMessage.toLowerCase().includes("resource_exhausted");
 
         if (isRateLimited) {
-            console.error("[Chat API] Rate limited by Gemini");
+            const errorCause = error instanceof Error ? error.cause : null;
+            const responseHeaders =
+                typeof errorCause === "object" &&
+                errorCause &&
+                "responseHeaders" in errorCause
+                    ? ((errorCause as { responseHeaders?: Headers })
+                          .responseHeaders ?? null)
+                    : null;
+            const rateLimitHeaders = extractQuotaHeaders(responseHeaders);
+            const retrySeconds = extractRetrySeconds(errorMessage);
+
             return new Response(
                 JSON.stringify({
-                    error: "Rate limited. The free AI tier has limited requests per minute. Please wait a moment and try again.",
+                    error: buildQuotaExceededMessage(retrySeconds),
                 }),
                 {
                     status: 429,
-                    headers: { "Content-Type": "application/json" },
+                    headers: {
+                        "Content-Type": "application/json",
+                        ...(retrySeconds !== null
+                            ? { "Retry-After": String(retrySeconds) }
+                            : {}),
+                        ...rateLimitHeaders,
+                    },
                 }
             );
         }

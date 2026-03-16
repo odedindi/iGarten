@@ -1,8 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTaskStore } from "@/lib/task-store";
 import { buildGardenContext } from "@/lib/ai/garden-context";
+import { parseAiQuotaHeaders, type AiQuotaState } from "@/lib/ai/rate-limits";
+import { useAiModels } from "@/hooks/use-ai-models";
 import {
     loadScheduleHistory,
     prependWithLimit,
@@ -12,6 +14,13 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
 import {
     Accordion,
     AccordionContent,
@@ -26,8 +35,10 @@ import {
     AlertCircle,
 } from "lucide-react";
 import type { TaskPriority } from "@/lib/task-store";
+import { AiQuotaGarden } from "@/components/ai-quota-garden";
 
 const MAX_SCHEDULE_HISTORY = 10;
+const MODEL_PREFERENCE_KEY = "ig-ai-selected-model";
 
 interface GeneratedTask {
     title: string;
@@ -51,6 +62,14 @@ export function CareSchedule() {
     const [error, setError] = useState<string | null>(null);
     const [history, setHistory] = useState<ScheduleHistoryEntry[]>([]);
     const [historyLoaded, setHistoryLoaded] = useState(false);
+    const [selectedModel, setSelectedModel] = useState<string>("");
+    const [quota, setQuota] = useState<AiQuotaState | null>(null);
+    const modelInitializedRef = useRef(false);
+    const {
+        models: availableModels,
+        defaultModel,
+        isLoading: modelsLoading,
+    } = useAiModels("schedule");
 
     useEffect(() => {
         let cancelled = false;
@@ -80,6 +99,38 @@ export function CareSchedule() {
         void saveScheduleHistory(history as ScheduleHistoryRecord[]);
     }, [history, historyLoaded]);
 
+    useEffect(() => {
+        if (availableModels.length === 0) {
+            return;
+        }
+
+        setSelectedModel((current) => {
+            if (
+                modelInitializedRef.current &&
+                current &&
+                availableModels.some((model) => model.id === current)
+            ) {
+                return current;
+            }
+
+            const storedModel =
+                window.localStorage.getItem(MODEL_PREFERENCE_KEY);
+            const preferredModel =
+                storedModel &&
+                availableModels.some((model) => model.id === storedModel)
+                    ? storedModel
+                    : (defaultModel ?? availableModels[0]?.id ?? "");
+
+            modelInitializedRef.current = true;
+            return preferredModel;
+        });
+    }, [availableModels, defaultModel]);
+
+    const handleModelChange = (value: string) => {
+        setSelectedModel(value);
+        window.localStorage.setItem(MODEL_PREFERENCE_KEY, value);
+    };
+
     const handleGenerate = async () => {
         setLoading(true);
         setError(null);
@@ -88,8 +139,17 @@ export function CareSchedule() {
             const response = await fetch("/api/schedule", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ gardenContext }),
+                body: JSON.stringify({
+                    gardenContext,
+                    model: selectedModel || undefined,
+                }),
             });
+
+            setQuota(
+                parseAiQuotaHeaders(response.headers, {
+                    isRateLimited: response.status === 429,
+                })
+            );
 
             if (response.status === 429) {
                 const data = await response.json();
@@ -165,7 +225,7 @@ export function CareSchedule() {
     return (
         <Card className="garden-card">
             <CardHeader>
-                <div className="flex items-center justify-between">
+                <div className="flex flex-wrap items-center justify-between gap-2">
                     <CardTitle className="text-primary flex items-center gap-2">
                         <Sparkles className="h-5 w-5" />
                         AI Care Schedule
@@ -173,23 +233,46 @@ export function CareSchedule() {
                     <Button
                         onClick={handleGenerate}
                         disabled={loading}
+                        size="sm"
                         className="garden-button"
                     >
                         {loading ? (
                             <>
-                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                Generating...
+                                <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+                                <span className="hidden sm:inline">
+                                    Generating...
+                                </span>
                             </>
                         ) : (
                             <>
-                                <Sparkles className="mr-2 h-4 w-4" />
-                                Generate Schedule
+                                <Sparkles className="mr-1.5 h-4 w-4" />
+                                <span className="xs:inline hidden">
+                                    Generate{" "}
+                                </span>
+                                Schedule
                             </>
                         )}
                     </Button>
                 </div>
+                <Select
+                    value={selectedModel}
+                    onValueChange={handleModelChange}
+                    disabled={modelsLoading || loading}
+                >
+                    <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Select AI model" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        {availableModels.map((model) => (
+                            <SelectItem key={model.id} value={model.id}>
+                                {model.displayName}
+                            </SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
             </CardHeader>
             <CardContent>
+                <AiQuotaGarden quota={quota} className="mb-4" />
                 {error && (
                     <div className="bg-destructive/10 border-destructive/20 mb-4 flex items-start gap-3 rounded-lg border p-4">
                         <AlertCircle className="text-destructive mt-0.5 h-5 w-5 shrink-0" />
@@ -201,9 +284,9 @@ export function CareSchedule() {
                     </div>
                 )}
                 {!schedule ? (
-                    <div className="text-muted-foreground flex min-h-[300px] items-center justify-center text-center">
+                    <div className="text-muted-foreground flex min-h-75 items-center justify-center text-center">
                         <div>
-                            <Sparkles className="text-primary mx-auto mb-4 h-12 w-12 opacity-50" />
+                            <Sparkles className="text-primary mx-auto mb-4.5 h-12 w-12 opacity-50" />
                             <p className="text-sm">
                                 Generate an AI-powered care schedule based on
                                 your current garden. The AI will analyze your
@@ -225,7 +308,7 @@ export function CareSchedule() {
                                     className="bg-muted border-primary/20"
                                 >
                                     <CardContent className="p-4">
-                                        <div className="flex items-start justify-between gap-4">
+                                        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                                             <div className="flex-1 space-y-2">
                                                 <div className="flex items-center gap-2">
                                                     <h4 className="font-semibold">
@@ -242,7 +325,7 @@ export function CareSchedule() {
                                                 <p className="text-muted-foreground text-sm">
                                                     {task.description}
                                                 </p>
-                                                <div className="flex items-center gap-2 text-xs">
+                                                <div className="flex flex-wrap items-center gap-2">
                                                     <span className="text-muted-foreground">
                                                         Due:{" "}
                                                         {new Date(

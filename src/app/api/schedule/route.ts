@@ -1,7 +1,8 @@
 import { generateObject } from "ai";
-import { structuredModel } from "@/lib/ai/config";
+import { DEFAULT_CHAT_MODEL, getChatModel } from "@/lib/ai/config";
 import { SCHEDULE_SYSTEM_PROMPT } from "@/lib/ai/prompts";
 import { z } from "zod";
+import { extractQuotaHeaders } from "@/lib/ai/rate-limits";
 
 const scheduleSchema = z.object({
     tasks: z.array(
@@ -20,12 +21,17 @@ export async function POST(req: Request) {
     console.log("[Schedule API] POST request received");
 
     try {
-        const { gardenContext } = await req.json();
+        const { gardenContext, model } = await req.json();
+        const selectedModel =
+            typeof model === "string" && model.length > 0
+                ? model
+                : DEFAULT_CHAT_MODEL;
 
         console.log(
             "[Schedule API] Garden context length:",
             gardenContext?.length ?? 0
         );
+        console.log("[Schedule API] Selected model:", selectedModel);
 
         if (!gardenContext) {
             console.log("[Schedule API] No garden context — returning 400");
@@ -40,7 +46,7 @@ export async function POST(req: Request) {
 
         console.log("[Schedule API] Calling Gemini generateObject...");
         const result = await generateObject({
-            model: structuredModel,
+            model: getChatModel(selectedModel),
             schema: scheduleSchema,
             system: SCHEDULE_SYSTEM_PROMPT,
             prompt: gardenContext,
@@ -54,7 +60,11 @@ export async function POST(req: Request) {
 
         return new Response(JSON.stringify(result.object), {
             status: 200,
-            headers: { "Content-Type": "application/json" },
+            headers: {
+                "Content-Type": "application/json",
+                "x-ig-model": selectedModel,
+                ...extractQuotaHeaders(result.response?.headers),
+            },
         });
     } catch (error) {
         const elapsed = Date.now() - startTime;

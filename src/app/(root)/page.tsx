@@ -52,22 +52,24 @@ export default function GardenEntryPage() {
                 onValueChange={setTab}
                 className="garden-tabs"
             >
-                <TabsList className="mb-6 grid w-full grid-cols-2">
-                    <TabsTrigger
-                        value="harvest"
-                        className="garden-tab flex items-center gap-2"
-                    >
-                        <Flower2 className="h-4 w-4" />
-                        <span>Log Harvest</span>
-                    </TabsTrigger>
-                    <TabsTrigger
-                        value="task"
-                        className="garden-tab flex items-center gap-2"
-                    >
-                        <Sprout className="h-4 w-4" />
-                        <span>New Garden Task</span>
-                    </TabsTrigger>
-                </TabsList>
+                <div className="overflow-x-auto">
+                    <TabsList className="mb-6 w-full">
+                        <TabsTrigger
+                            value="harvest"
+                            className="garden-tab flex items-center gap-2"
+                        >
+                            <Flower2 className="h-4 w-4" />
+                            <span>Log Harvest</span>
+                        </TabsTrigger>
+                        <TabsTrigger
+                            value="task"
+                            className="garden-tab flex items-center gap-2"
+                        >
+                            <Sprout className="h-4 w-4" />
+                            <span>New Garden Task</span>
+                        </TabsTrigger>
+                    </TabsList>
+                </div>
                 <TabsContent value="harvest">
                     <Card className="garden-card">
                         <CardHeader>

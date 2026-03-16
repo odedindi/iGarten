@@ -1,8 +1,10 @@
 "use client";
 
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { useTaskStore } from "@/lib/task-store";
 import { buildGardenContext } from "@/lib/ai/garden-context";
+import { parseAiQuotaHeaders, type AiQuotaState } from "@/lib/ai/rate-limits";
+import { useAiModels } from "@/hooks/use-ai-models";
 import {
     loadChatConversations,
     saveChatConversations,
@@ -30,10 +32,13 @@ import {
     Trash2,
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
+import { AiQuotaGarden } from "@/components/ai-quota-garden";
+import { gsap } from "gsap";
 
 const MAX_MODEL_MESSAGES = 24;
 const MAX_MODEL_CHARS = 12000;
 const MIN_MESSAGES_TO_KEEP = 6;
+const MODEL_PREFERENCE_KEY = "ig-ai-selected-model";
 
 function createConversation(): ChatConversationRecord {
     const now = new Date().toISOString();
@@ -89,7 +94,10 @@ function buildModelMessageWindow(messages: ChatMessageRecord[]) {
 export function PlantChat() {
     const { tasks, harvests } = useTaskStore();
     const gardenContext = buildGardenContext(tasks, harvests);
-    const scrollRef = useRef<HTMLDivElement>(null);
+    const scrollAreaRef = useRef<HTMLDivElement>(null);
+    const viewportRef = useRef<HTMLDivElement | null>(null);
+    const bottomSentinelRef = useRef<HTMLDivElement>(null);
+    const modelInitializedRef = useRef(false);
     const [conversations, setConversations] = useState<
         ChatConversationRecord[]
     >([]);
@@ -100,6 +108,14 @@ export function PlantChat() {
     const [isLoading, setIsLoading] = useState(false);
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
     const [historyLoaded, setHistoryLoaded] = useState(false);
+    const [selectedModel, setSelectedModel] = useState<string>("");
+    const [quota, setQuota] = useState<AiQuotaState | null>(null);
+    const [autoScrollEnabled, setAutoScrollEnabled] = useState(true);
+    const {
+        models: availableModels,
+        defaultModel,
+        isLoading: modelsLoading,
+    } = useAiModels("chat");
 
     const activeConversation = conversations.find(
         (conversation) => conversation.id === activeConversationId
@@ -148,10 +164,130 @@ export function PlantChat() {
     }, [conversations, historyLoaded]);
 
     useEffect(() => {
-        if (scrollRef.current) {
-            scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+        if (availableModels.length === 0) {
+            return;
         }
-    }, [messages]);
+
+        setSelectedModel((current) => {
+            if (
+                modelInitializedRef.current &&
+                current &&
+                availableModels.some((model) => model.id === current)
+            ) {
+                return current;
+            }
+
+            const storedModel =
+                window.localStorage.getItem(MODEL_PREFERENCE_KEY);
+            const preferredModel =
+                storedModel &&
+                availableModels.some((model) => model.id === storedModel)
+                    ? storedModel
+                    : (defaultModel ?? availableModels[0]?.id ?? "");
+
+            modelInitializedRef.current = true;
+            return preferredModel;
+        });
+    }, [availableModels, defaultModel]);
+
+    const handleModelChange = (value: string) => {
+        setSelectedModel(value);
+        window.localStorage.setItem(MODEL_PREFERENCE_KEY, value);
+    };
+
+    const scrollToBottom = useCallback((immediate = false) => {
+        const viewport = viewportRef.current;
+        if (!viewport) {
+            return;
+        }
+
+        gsap.to(viewport, {
+            scrollTop: viewport.scrollHeight,
+            duration: immediate ? 0 : 0.35,
+            ease: "power2.out",
+            overwrite: "auto",
+        });
+    }, []);
+
+    useEffect(() => {
+        const scrollAreaElement = scrollAreaRef.current;
+        if (!scrollAreaElement) {
+            return;
+        }
+
+        const viewport = scrollAreaElement.querySelector(
+            "[data-radix-scroll-area-viewport]"
+        ) as HTMLDivElement | null;
+
+        if (!viewport) {
+            return;
+        }
+
+        viewportRef.current = viewport;
+
+        const onScroll = () => {
+            const distanceFromBottom =
+                viewport.scrollHeight -
+                viewport.scrollTop -
+                viewport.clientHeight;
+
+            if (distanceFromBottom > 48) {
+                setAutoScrollEnabled(false);
+            }
+        };
+
+        const intersectionObserver = new IntersectionObserver(
+            (entries) => {
+                if (entries.some((entry) => entry.isIntersecting)) {
+                    setAutoScrollEnabled(true);
+                }
+            },
+            {
+                root: viewport,
+                threshold: 0.98,
+            }
+        );
+
+        if (bottomSentinelRef.current) {
+            intersectionObserver.observe(bottomSentinelRef.current);
+        }
+
+        viewport.addEventListener("scroll", onScroll, { passive: true });
+
+        return () => {
+            viewport.removeEventListener("scroll", onScroll);
+            intersectionObserver.disconnect();
+            gsap.killTweensOf(viewport);
+        };
+    }, []);
+
+    useEffect(() => {
+        if (!autoScrollEnabled) {
+            return;
+        }
+
+        scrollToBottom(messages.length <= 1);
+    }, [messages, autoScrollEnabled, scrollToBottom]);
+
+    const buildRateLimitNotice = (quotaState: AiQuotaState | null) => {
+        if (!quotaState) {
+            return "Rate limited — please wait a moment and try again.";
+        }
+
+        if (quotaState.rpmRemaining !== null && quotaState.rpmRemaining <= 0) {
+            return "You ran out of requests per minute. Please wait for the minute quota to reset and try again.";
+        }
+
+        if (quotaState.rpdRemaining !== null && quotaState.rpdRemaining <= 0) {
+            return "You ran out of requests for today. Please try again after the daily reset.";
+        }
+
+        return "Rate limited — please wait a moment and try again.";
+    };
+
+    const buildQuotaExhaustedFallback = () => {
+        return "Request failed because the selected model quota is exhausted right now. Try another model or retry after a minute.";
+    };
 
     const upsertConversation = (
         id: string,
@@ -175,6 +311,7 @@ export function PlantChat() {
         setConversations((prev) => [newConversation, ...prev]);
         setActiveConversationId(newConversation.id);
         setErrorMessage(null);
+        setAutoScrollEnabled(true);
     };
 
     const clearHistory = () => {
@@ -188,6 +325,7 @@ export function PlantChat() {
             messages: [],
         }));
         setErrorMessage(null);
+        setAutoScrollEnabled(true);
     };
 
     const deleteConversation = () => {
@@ -214,6 +352,7 @@ export function PlantChat() {
 
         setActiveConversationId(nextActiveId);
         setErrorMessage(null);
+        setAutoScrollEnabled(true);
     };
 
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -270,14 +409,19 @@ export function PlantChat() {
                 body: JSON.stringify({
                     messages: messagesForModel,
                     gardenContext,
+                    model: selectedModel || undefined,
                 }),
             });
+
+            const parsedQuota = parseAiQuotaHeaders(response.headers, {
+                isRateLimited: response.status === 429,
+            });
+            setQuota(parsedQuota);
 
             if (response.status === 429) {
                 const data = await response.json();
                 setErrorMessage(
-                    data.error ||
-                        "Rate limited — please wait a moment and try again."
+                    data.error || buildRateLimitNotice(parsedQuota)
                 );
                 return;
             }
@@ -289,6 +433,7 @@ export function PlantChat() {
             const reader = response.body?.getReader();
             const decoder = new TextDecoder();
             let assistantContent = "";
+            let receivedChunk = false;
 
             const assistantMessage: ChatMessageRecord = {
                 id: crypto.randomUUID(),
@@ -308,6 +453,9 @@ export function PlantChat() {
                     if (done) break;
 
                     const chunk = decoder.decode(value);
+                    if (chunk.length > 0) {
+                        receivedChunk = true;
+                    }
                     assistantContent += chunk;
 
                     upsertConversation(conversationId, (conversation) => ({
@@ -321,11 +469,32 @@ export function PlantChat() {
                         ),
                     }));
                 }
+
+                if (!receivedChunk || assistantContent.trim().length === 0) {
+                    upsertConversation(conversationId, (conversation) => ({
+                        ...conversation,
+                        updatedAt: new Date().toISOString(),
+                        messages: conversation.messages.filter(
+                            (message) => message.id !== assistantMessage.id
+                        ),
+                    }));
+
+                    setErrorMessage(buildQuotaExhaustedFallback());
+                }
             }
         } catch (error) {
             console.error("Chat error:", error);
+            const errorMessageText =
+                error instanceof Error ? error.message : String(error);
+            const isQuotaIssue =
+                errorMessageText.includes("429") ||
+                errorMessageText.toLowerCase().includes("quota") ||
+                errorMessageText.toLowerCase().includes("resource_exhausted");
+
             setErrorMessage(
-                "Sorry, I encountered an error. Please try again later."
+                isQuotaIssue
+                    ? buildQuotaExhaustedFallback()
+                    : "Sorry, I encountered an error. Please try again later."
             );
         } finally {
             setIsLoading(false);
@@ -333,22 +502,22 @@ export function PlantChat() {
     };
 
     return (
-        <Card className="garden-card flex min-h-[600px] flex-col">
+        <Card className="garden-card min-h-100">
             <CardHeader>
-                <div className="flex items-center justify-between gap-4">
+                <div className="flex flex-wrap items-center justify-between gap-2">
                     <CardTitle className="text-primary flex items-center gap-2">
                         <Bot className="h-5 w-5" />
                         Chat with Gruno
                     </CardTitle>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1.5">
                         <Button
                             variant="outline"
                             size="sm"
                             onClick={createNewConversation}
                             disabled={isLoading}
                         >
-                            <MessageSquarePlus className="mr-2 h-4 w-4" />
-                            New
+                            <MessageSquarePlus className="h-4 w-4 sm:mr-2" />
+                            <span className="hidden sm:inline">New</span>
                         </Button>
                         <Button
                             variant="outline"
@@ -369,8 +538,10 @@ export function PlantChat() {
                     </div>
                 </div>
                 <Select
-                    value={activeConversationId ?? undefined}
-                    onValueChange={setActiveConversationId}
+                    value={activeConversationId ?? ""}
+                    onValueChange={(value) =>
+                        setActiveConversationId(value || null)
+                    }
                 >
                     <SelectTrigger className="w-full">
                         <SelectValue placeholder="Select conversation" />
@@ -386,11 +557,28 @@ export function PlantChat() {
                         ))}
                     </SelectContent>
                 </Select>
+                <Select
+                    value={selectedModel}
+                    onValueChange={handleModelChange}
+                    disabled={modelsLoading || isLoading}
+                >
+                    <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Select AI model" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        {availableModels.map((model) => (
+                            <SelectItem key={model.id} value={model.id}>
+                                {model.displayName}
+                            </SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
             </CardHeader>
             <CardContent className="flex flex-1 flex-col gap-4">
-                <ScrollArea className="flex-1 pr-4" ref={scrollRef}>
+                <AiQuotaGarden quota={quota} />
+                <ScrollArea className="flex-1 pr-2 sm:pr-4" ref={scrollAreaRef}>
                     {messages.length === 0 && !errorMessage ? (
-                        <div className="text-muted-foreground flex h-full items-center justify-center text-center">
+                        <div className="text-muted-foreground flex h-full min-h-52 items-center justify-center text-center">
                             <div>
                                 <Bot className="text-primary mx-auto mb-4 h-12 w-12 opacity-50" />
                                 <p className="text-sm">
@@ -405,14 +593,14 @@ export function PlantChat() {
                             {messages.map((message: ChatMessageRecord) => (
                                 <div
                                     key={message.id}
-                                    className={`flex items-start gap-3 ${
+                                    className={`flex items-start gap-2 sm:gap-3 ${
                                         message.role === "user"
                                             ? "flex-row-reverse"
                                             : ""
                                     }`}
                                 >
                                     <div
-                                        className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${
+                                        className={`hidden h-8 w-8 shrink-0 items-center justify-center rounded-full sm:flex ${
                                             message.role === "user"
                                                 ? "bg-primary text-primary-foreground"
                                                 : "bg-muted"
@@ -425,14 +613,29 @@ export function PlantChat() {
                                         )}
                                     </div>
                                     <div
-                                        className={`flex-1 rounded-lg p-3 ${
+                                        className={`min-w-0 flex-1 rounded-lg p-2.5 sm:p-3 ${
                                             message.role === "user"
                                                 ? "bg-primary text-primary-foreground"
                                                 : "bg-muted"
                                         }`}
                                     >
                                         {message.role === "user" ? (
-                                            <p className="text-sm whitespace-pre-wrap">
+                                            <p
+                                                ref={(node) => {
+                                                    // scroll to bottom when a new user message is added
+                                                    if (
+                                                        node &&
+                                                        message.id ===
+                                                            messages[
+                                                                messages.length -
+                                                                    1
+                                                            ].id
+                                                    ) {
+                                                        scrollToBottom(true);
+                                                    }
+                                                }}
+                                                className="text-sm whitespace-pre-wrap"
+                                            >
                                                 {message.content}
                                             </p>
                                         ) : (
@@ -467,6 +670,7 @@ export function PlantChat() {
                                     </div>
                                 </div>
                             )}
+                            <div ref={bottomSentinelRef} className="h-px" />
                         </div>
                     )}
                 </ScrollArea>
@@ -477,8 +681,8 @@ export function PlantChat() {
                     <Input
                         value={inputValue}
                         onChange={(e) => setInputValue(e.target.value)}
-                        placeholder="Ask about plant care, pests, diseases..."
-                        className="garden-input flex-1"
+                        placeholder="Ask about plant care..."
+                        className="garden-input min-w-0 flex-1"
                         disabled={isLoading}
                     />
                     <Button

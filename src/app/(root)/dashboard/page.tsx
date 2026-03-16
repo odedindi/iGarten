@@ -266,14 +266,16 @@ export default function DashboardPage() {
                 </Card>
             </div>
             <Tabs defaultValue="tasks" className="garden-tabs">
-                <TabsList className="garden-tabs">
-                    <TabsTrigger value="tasks" className="garden-tab">
-                        Garden Tasks
-                    </TabsTrigger>
-                    <TabsTrigger value="harvests" className="garden-tab">
-                        Harvests
-                    </TabsTrigger>
-                </TabsList>
+                <div className="overflow-x-auto">
+                    <TabsList className="garden-tabs">
+                        <TabsTrigger value="tasks" className="garden-tab">
+                            Garden Tasks
+                        </TabsTrigger>
+                        <TabsTrigger value="harvests" className="garden-tab">
+                            Harvests
+                        </TabsTrigger>
+                    </TabsList>
+                </div>
                 <TabsContent value="tasks" className="space-y-4">
                     <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                         <Card className="garden-card">
