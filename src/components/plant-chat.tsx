@@ -502,22 +502,25 @@ export function PlantChat() {
     };
 
     return (
-        <Card className="garden-card flex min-h-[600px] flex-col">
+        <Card
+            className="garden-card flex flex-col"
+            style={{ height: "calc(100dvh - 200px)", minHeight: "520px" }}
+        >
             <CardHeader>
-                <div className="flex items-center justify-between gap-4">
+                <div className="flex flex-wrap items-center justify-between gap-2">
                     <CardTitle className="text-primary flex items-center gap-2">
                         <Bot className="h-5 w-5" />
                         Chat with Gruno
                     </CardTitle>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1.5">
                         <Button
                             variant="outline"
                             size="sm"
                             onClick={createNewConversation}
                             disabled={isLoading}
                         >
-                            <MessageSquarePlus className="mr-2 h-4 w-4" />
-                            New
+                            <MessageSquarePlus className="h-4 w-4 sm:mr-2" />
+                            <span className="hidden sm:inline">New</span>
                         </Button>
                         <Button
                             variant="outline"
@@ -576,7 +579,7 @@ export function PlantChat() {
             </CardHeader>
             <CardContent className="flex flex-1 flex-col gap-4">
                 <AiQuotaGarden quota={quota} />
-                <ScrollArea className="flex-1 pr-4" ref={scrollAreaRef}>
+                <ScrollArea className="flex-1 pr-2 sm:pr-4" ref={scrollAreaRef}>
                     {messages.length === 0 && !errorMessage ? (
                         <div className="text-muted-foreground flex h-full items-center justify-center text-center">
                             <div>
@@ -593,7 +596,7 @@ export function PlantChat() {
                             {messages.map((message: ChatMessageRecord) => (
                                 <div
                                     key={message.id}
-                                    className={`flex items-start gap-3 ${
+                                    className={`flex items-start gap-2 sm:gap-3 ${
                                         message.role === "user"
                                             ? "flex-row-reverse"
                                             : ""
@@ -613,7 +616,7 @@ export function PlantChat() {
                                         )}
                                     </div>
                                     <div
-                                        className={`flex-1 rounded-lg p-3 ${
+                                        className={`min-w-0 flex-1 rounded-lg p-2.5 sm:p-3 ${
                                             message.role === "user"
                                                 ? "bg-primary text-primary-foreground"
                                                 : "bg-muted"
@@ -681,8 +684,8 @@ export function PlantChat() {
                     <Input
                         value={inputValue}
                         onChange={(e) => setInputValue(e.target.value)}
-                        placeholder="Ask about plant care, pests, diseases..."
-                        className="garden-input flex-1"
+                        placeholder="Ask about plant care..."
+                        className="garden-input min-w-0 flex-1"
                         disabled={isLoading}
                     />
                     <Button

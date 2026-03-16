@@ -225,7 +225,7 @@ export function CareSchedule() {
     return (
         <Card className="garden-card">
             <CardHeader>
-                <div className="flex items-center justify-between">
+                <div className="flex flex-wrap items-center justify-between gap-2">
                     <CardTitle className="text-primary flex items-center gap-2">
                         <Sparkles className="h-5 w-5" />
                         AI Care Schedule
@@ -233,17 +233,23 @@ export function CareSchedule() {
                     <Button
                         onClick={handleGenerate}
                         disabled={loading}
+                        size="sm"
                         className="garden-button"
                     >
                         {loading ? (
                             <>
-                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                Generating...
+                                <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+                                <span className="hidden sm:inline">
+                                    Generating...
+                                </span>
                             </>
                         ) : (
                             <>
-                                <Sparkles className="mr-2 h-4 w-4" />
-                                Generate Schedule
+                                <Sparkles className="mr-1.5 h-4 w-4" />
+                                <span className="xs:inline hidden">
+                                    Generate{" "}
+                                </span>
+                                Schedule
                             </>
                         )}
                     </Button>
@@ -302,7 +308,7 @@ export function CareSchedule() {
                                     className="bg-muted border-primary/20"
                                 >
                                     <CardContent className="p-4">
-                                        <div className="flex items-start justify-between gap-4">
+                                        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                                             <div className="flex-1 space-y-2">
                                                 <div className="flex items-center gap-2">
                                                     <h4 className="font-semibold">
@@ -319,7 +325,7 @@ export function CareSchedule() {
                                                 <p className="text-muted-foreground text-sm">
                                                     {task.description}
                                                 </p>
-                                                <div className="flex items-center gap-2 text-xs">
+                                                <div className="flex flex-wrap items-center gap-2">
                                                     <span className="text-muted-foreground">
                                                         Due:{" "}
                                                         {new Date(
