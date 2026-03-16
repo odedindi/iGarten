@@ -1,12 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTaskStore } from "@/lib/task-store";
 import { buildGardenContext } from "@/lib/ai/garden-context";
-import {
-    parseAiQuotaHeaders,
-    type AiQuotaState,
-} from "@/lib/ai/rate-limits";
+import { parseAiQuotaHeaders, type AiQuotaState } from "@/lib/ai/rate-limits";
+import { useAiModels } from "@/hooks/use-ai-models";
 import {
     loadScheduleHistory,
     prependWithLimit,
@@ -56,11 +54,6 @@ interface ScheduleHistoryEntry {
     tasks: GeneratedTask[];
 }
 
-interface ModelOption {
-    id: string;
-    displayName: string;
-}
-
 export function CareSchedule() {
     const { tasks, harvests, addTask } = useTaskStore();
     const [schedule, setSchedule] = useState<GeneratedTask[] | null>(null);
@@ -69,10 +62,14 @@ export function CareSchedule() {
     const [error, setError] = useState<string | null>(null);
     const [history, setHistory] = useState<ScheduleHistoryEntry[]>([]);
     const [historyLoaded, setHistoryLoaded] = useState(false);
-    const [modelsLoading, setModelsLoading] = useState(true);
-    const [availableModels, setAvailableModels] = useState<ModelOption[]>([]);
     const [selectedModel, setSelectedModel] = useState<string>("");
     const [quota, setQuota] = useState<AiQuotaState | null>(null);
+    const modelInitializedRef = useRef(false);
+    const {
+        models: availableModels,
+        defaultModel,
+        isLoading: modelsLoading,
+    } = useAiModels("schedule");
 
     useEffect(() => {
         let cancelled = false;
@@ -103,64 +100,36 @@ export function CareSchedule() {
     }, [history, historyLoaded]);
 
     useEffect(() => {
-        let cancelled = false;
-
-        const loadModels = async () => {
-            setModelsLoading(true);
-            try {
-                const response = await fetch(
-                    "/api/chat/models?feature=schedule&tier=free",
-                    {
-                    cache: "no-store",
-                    }
-                );
-                if (!response.ok) {
-                    throw new Error("Failed to load models");
-                }
-
-                const data = (await response.json()) as {
-                    models?: ModelOption[];
-                    defaultModel?: string;
-                };
-
-                if (cancelled) {
-                    return;
-                }
-
-                const models = data.models ?? [];
-                setAvailableModels(models);
-
-                const storedModel = window.localStorage.getItem(
-                    MODEL_PREFERENCE_KEY
-                );
-                const preferredModel =
-                    storedModel && models.some((model) => model.id === storedModel)
-                        ? storedModel
-                        : data.defaultModel ?? models[0]?.id ?? "";
-                setSelectedModel(preferredModel);
-            } catch (loadError) {
-                console.error("Failed loading models", loadError);
-            } finally {
-                if (!cancelled) {
-                    setModelsLoading(false);
-                }
-            }
-        };
-
-        void loadModels();
-
-        return () => {
-            cancelled = true;
-        };
-    }, []);
-
-    useEffect(() => {
-        if (!selectedModel) {
+        if (availableModels.length === 0) {
             return;
         }
 
-        window.localStorage.setItem(MODEL_PREFERENCE_KEY, selectedModel);
-    }, [selectedModel]);
+        setSelectedModel((current) => {
+            if (
+                modelInitializedRef.current &&
+                current &&
+                availableModels.some((model) => model.id === current)
+            ) {
+                return current;
+            }
+
+            const storedModel =
+                window.localStorage.getItem(MODEL_PREFERENCE_KEY);
+            const preferredModel =
+                storedModel &&
+                availableModels.some((model) => model.id === storedModel)
+                    ? storedModel
+                    : (defaultModel ?? availableModels[0]?.id ?? "");
+
+            modelInitializedRef.current = true;
+            return preferredModel;
+        });
+    }, [availableModels, defaultModel]);
+
+    const handleModelChange = (value: string) => {
+        setSelectedModel(value);
+        window.localStorage.setItem(MODEL_PREFERENCE_KEY, value);
+    };
 
     const handleGenerate = async () => {
         setLoading(true);
@@ -280,8 +249,8 @@ export function CareSchedule() {
                     </Button>
                 </div>
                 <Select
-                    value={selectedModel || undefined}
-                    onValueChange={setSelectedModel}
+                    value={selectedModel}
+                    onValueChange={handleModelChange}
                     disabled={modelsLoading || loading}
                 >
                     <SelectTrigger className="w-full">
