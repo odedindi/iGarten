@@ -125,6 +125,14 @@ export function PlantChat() {
         [activeConversation?.messages]
     );
 
+    const activeConversation = conversations.find(
+        (conversation) => conversation.id === activeConversationId
+    );
+    const messages = useMemo(
+        () => activeConversation?.messages ?? [],
+        [activeConversation?.messages]
+    );
+
     useEffect(() => {
         let cancelled = false;
 
@@ -312,6 +320,30 @@ export function PlantChat() {
         setActiveConversationId(newConversation.id);
         setErrorMessage(null);
         setAutoScrollEnabled(true);
+    };
+
+    const upsertConversation = (
+        id: string,
+        updater: (
+            conversation: ChatConversationRecord
+        ) => ChatConversationRecord
+    ) => {
+        setConversations((prev) =>
+            sortConversations(
+                prev.map((conversation) =>
+                    conversation.id === id
+                        ? updater(conversation)
+                        : conversation
+                )
+            )
+        );
+    };
+
+    const createNewConversation = () => {
+        const newConversation = createConversation();
+        setConversations((prev) => [newConversation, ...prev]);
+        setActiveConversationId(newConversation.id);
+        setErrorMessage(null);
     };
 
     const clearHistory = () => {
