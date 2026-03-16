@@ -47,6 +47,11 @@ export function AiQuotaGarden({ quota, className }: AiQuotaGardenProps) {
         return null;
     }
 
+    const minuteExhausted =
+        quota.rpmRemaining !== null && quota.rpmRemaining <= 0;
+    const dayExhausted = quota.rpdRemaining !== null && quota.rpdRemaining <= 0;
+    const exhausted = quota.isRateLimited || minuteExhausted || dayExhausted;
+
     const rpmUsage = computeUsagePercent(quota.rpmRemaining, quota.rpmLimit);
     const rpdUsage = computeUsagePercent(quota.rpdRemaining, quota.rpdLimit);
     const mood = getGardenMood(quota);
@@ -65,6 +70,13 @@ export function AiQuotaGarden({ quota, className }: AiQuotaGardenProps) {
             </div>
 
             <div className="space-y-3">
+                {exhausted && (
+                    <p className="text-destructive text-xs font-medium">
+                        AI quota exhausted for now. Wait for reset before
+                        sending more requests.
+                    </p>
+                )}
+
                 {(quota.rpmLimit !== null || quota.rpmRemaining !== null) && (
                     <div className="space-y-1">
                         <div className="flex items-center justify-between text-xs">

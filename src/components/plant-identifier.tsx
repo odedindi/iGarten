@@ -7,10 +7,8 @@ import {
     saveIdentifyHistory,
     type IdentifyHistoryRecord,
 } from "../lib/ai/history";
-import {
-    parseAiQuotaHeaders,
-    type AiQuotaState,
-} from "@/lib/ai/rate-limits";
+import { parseAiQuotaHeaders, type AiQuotaState } from "@/lib/ai/rate-limits";
+import { useAiModels } from "@/hooks/use-ai-models";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -34,11 +32,6 @@ interface IdentifyHistoryEntry {
     result: string;
 }
 
-interface ModelOption {
-    id: string;
-    displayName: string;
-}
-
 export function PlantIdentifier() {
     const [image, setImage] = useState<string | null>(null);
     const [result, setResult] = useState<string | null>(null);
@@ -47,10 +40,14 @@ export function PlantIdentifier() {
     const [sourceLabel, setSourceLabel] = useState<string>("Uploaded image");
     const [history, setHistory] = useState<IdentifyHistoryEntry[]>([]);
     const [historyLoaded, setHistoryLoaded] = useState(false);
-    const [modelsLoading, setModelsLoading] = useState(true);
-    const [availableModels, setAvailableModels] = useState<ModelOption[]>([]);
     const [selectedModel, setSelectedModel] = useState<string>("");
     const [quota, setQuota] = useState<AiQuotaState | null>(null);
+    const modelInitializedRef = useRef(false);
+    const {
+        models: availableModels,
+        defaultModel,
+        isLoading: modelsLoading,
+    } = useAiModels("identify");
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
@@ -82,64 +79,36 @@ export function PlantIdentifier() {
     }, [history, historyLoaded]);
 
     useEffect(() => {
-        let cancelled = false;
-
-        const loadModels = async () => {
-            setModelsLoading(true);
-            try {
-                const response = await fetch(
-                    "/api/chat/models?feature=identify&tier=free",
-                    {
-                    cache: "no-store",
-                    }
-                );
-                if (!response.ok) {
-                    throw new Error("Failed to load models");
-                }
-
-                const data = (await response.json()) as {
-                    models?: ModelOption[];
-                    defaultModel?: string;
-                };
-
-                if (cancelled) {
-                    return;
-                }
-
-                const models = data.models ?? [];
-                setAvailableModels(models);
-
-                const storedModel = window.localStorage.getItem(
-                    MODEL_PREFERENCE_KEY
-                );
-                const preferredModel =
-                    storedModel && models.some((model) => model.id === storedModel)
-                        ? storedModel
-                        : data.defaultModel ?? models[0]?.id ?? "";
-                setSelectedModel(preferredModel);
-            } catch (loadError) {
-                console.error("Failed loading models", loadError);
-            } finally {
-                if (!cancelled) {
-                    setModelsLoading(false);
-                }
-            }
-        };
-
-        void loadModels();
-
-        return () => {
-            cancelled = true;
-        };
-    }, []);
-
-    useEffect(() => {
-        if (!selectedModel) {
+        if (availableModels.length === 0) {
             return;
         }
 
-        window.localStorage.setItem(MODEL_PREFERENCE_KEY, selectedModel);
-    }, [selectedModel]);
+        setSelectedModel((current) => {
+            if (
+                modelInitializedRef.current &&
+                current &&
+                availableModels.some((model) => model.id === current)
+            ) {
+                return current;
+            }
+
+            const storedModel =
+                window.localStorage.getItem(MODEL_PREFERENCE_KEY);
+            const preferredModel =
+                storedModel &&
+                availableModels.some((model) => model.id === storedModel)
+                    ? storedModel
+                    : (defaultModel ?? availableModels[0]?.id ?? "");
+
+            modelInitializedRef.current = true;
+            return preferredModel;
+        });
+    }, [availableModels, defaultModel]);
+
+    const handleModelChange = (value: string) => {
+        setSelectedModel(value);
+        window.localStorage.setItem(MODEL_PREFERENCE_KEY, value);
+    };
 
     const handleFile = (file: File) => {
         if (!file.type.startsWith("image/")) {
@@ -253,8 +222,8 @@ export function PlantIdentifier() {
                     Identify Plant
                 </CardTitle>
                 <Select
-                    value={selectedModel || undefined}
-                    onValueChange={setSelectedModel}
+                    value={selectedModel}
+                    onValueChange={handleModelChange}
                     disabled={modelsLoading || loading}
                 >
                     <SelectTrigger className="w-full">

@@ -7,13 +7,12 @@ console.log(
 
 type GoogleGenerativeAIModelId = Parameters<typeof google>[0];
 
-export const DEFAULT_CHAT_MODEL = "gemini-2.5-flash";
+export const DEFAULT_CHAT_MODEL = "gemini-2.5-pro";
 
 export const FALLBACK_CHAT_MODELS = [
     "gemini-2.5-flash",
-    "gemini-2.5-flash-lite",
+    "gemini-3.0-pro",
     "gemini-3.0-flash",
-    "gemini-3.0-flash-lite",
 ] satisfies GoogleGenerativeAIModelId[];
 
 export function getChatModel(modelId: string = DEFAULT_CHAT_MODEL) {
