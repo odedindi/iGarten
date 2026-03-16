@@ -284,9 +284,9 @@ export function CareSchedule() {
                     </div>
                 )}
                 {!schedule ? (
-                    <div className="text-muted-foreground flex min-h-[300px] items-center justify-center text-center">
+                    <div className="text-muted-foreground flex min-h-75 items-center justify-center text-center">
                         <div>
-                            <Sparkles className="text-primary mx-auto mb-4 h-12 w-12 opacity-50" />
+                            <Sparkles className="text-primary mx-auto mb-4.5 h-12 w-12 opacity-50" />
                             <p className="text-sm">
                                 Generate an AI-powered care schedule based on
                                 your current garden. The AI will analyze your

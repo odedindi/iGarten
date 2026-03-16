@@ -247,7 +247,7 @@ export function PlantIdentifier() {
                         onDragOver={handleDrag}
                         onDrop={handleDrop}
                         onClick={() => fileInputRef.current?.click()}
-                        className={`border-primary/30 hover:border-primary/50 flex min-h-[200px] cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed p-6 transition-colors sm:min-h-[300px] sm:p-8 ${
+                        className={`border-primary/30 hover:border-primary/50 flex min-h-78.5 cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed p-6 transition-colors sm:min-h-[300px] sm:p-8 ${
                             dragActive ? "border-primary bg-primary/5" : ""
                         }`}
                     >

@@ -502,10 +502,7 @@ export function PlantChat() {
     };
 
     return (
-        <Card
-            className="garden-card flex flex-col"
-            style={{ height: "calc(100dvh - 200px)", minHeight: "520px" }}
-        >
+        <Card className="garden-card min-h-100">
             <CardHeader>
                 <div className="flex flex-wrap items-center justify-between gap-2">
                     <CardTitle className="text-primary flex items-center gap-2">
@@ -581,7 +578,7 @@ export function PlantChat() {
                 <AiQuotaGarden quota={quota} />
                 <ScrollArea className="flex-1 pr-2 sm:pr-4" ref={scrollAreaRef}>
                     {messages.length === 0 && !errorMessage ? (
-                        <div className="text-muted-foreground flex h-full items-center justify-center text-center">
+                        <div className="text-muted-foreground flex h-full min-h-52 items-center justify-center text-center">
                             <div>
                                 <Bot className="text-primary mx-auto mb-4 h-12 w-12 opacity-50" />
                                 <p className="text-sm">
@@ -603,7 +600,7 @@ export function PlantChat() {
                                     }`}
                                 >
                                     <div
-                                        className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${
+                                        className={`hidden h-8 w-8 shrink-0 items-center justify-center rounded-full sm:flex ${
                                             message.role === "user"
                                                 ? "bg-primary text-primary-foreground"
                                                 : "bg-muted"

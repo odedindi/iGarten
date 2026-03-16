@@ -8,7 +8,7 @@ import { Bot, Camera, Sparkles } from "lucide-react";
 
 export default function AIPage() {
     return (
-        <div className="container mx-auto max-w-6xl overflow-auto p-3 sm:p-6">
+        <div className="container mx-auto mb-6 max-w-6xl overflow-auto p-3 sm:p-6">
             <div className="garden-header mb-4 rounded-lg p-4 sm:mb-6 sm:p-6">
                 <h1 className="text-primary relative z-10 text-2xl font-bold sm:text-3xl">
                     AI Garden Assistant
