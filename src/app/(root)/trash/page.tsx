@@ -284,22 +284,24 @@ export default function TrashPage() {
             </div>
 
             <Tabs defaultValue="tasks" className="w-full">
-                <TabsList className="grid w-full grid-cols-2">
-                    <TabsTrigger
-                        value="tasks"
-                        className="flex items-center gap-2"
-                    >
-                        <Sprout className="h-4 w-4" />
-                        Tasks ({deletedTasks.length})
-                    </TabsTrigger>
-                    <TabsTrigger
-                        value="harvests"
-                        className="flex items-center gap-2"
-                    >
-                        <Flower2 className="h-4 w-4" />
-                        Harvests ({deletedHarvests.length})
-                    </TabsTrigger>
-                </TabsList>
+                <div className="overflow-x-auto">
+                    <TabsList className="grid w-full grid-cols-2">
+                        <TabsTrigger
+                            value="tasks"
+                            className="flex items-center gap-2"
+                        >
+                            <Sprout className="h-4 w-4" />
+                            Tasks ({deletedTasks.length})
+                        </TabsTrigger>
+                        <TabsTrigger
+                            value="harvests"
+                            className="flex items-center gap-2"
+                        >
+                            <Flower2 className="h-4 w-4" />
+                            Harvests ({deletedHarvests.length})
+                        </TabsTrigger>
+                    </TabsList>
+                </div>
 
                 <TabsContent value="tasks" className="mt-6">
                     {deletedTasks.length > 0 && (
