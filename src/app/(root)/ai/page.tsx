@@ -20,29 +20,31 @@ export default function AIPage() {
             </div>
 
             <Tabs defaultValue="chat" className="garden-tabs">
-                <TabsList className="mb-6 grid w-full grid-cols-3">
-                    <TabsTrigger
-                        value="chat"
-                        className="garden-tab flex items-center gap-2"
-                    >
-                        <Bot className="h-4 w-4" />
-                        <span>Plant Chat</span>
-                    </TabsTrigger>
-                    <TabsTrigger
-                        value="identify"
-                        className="garden-tab flex items-center gap-2"
-                    >
-                        <Camera className="h-4 w-4" />
-                        <span>Identify Plant</span>
-                    </TabsTrigger>
-                    <TabsTrigger
-                        value="schedule"
-                        className="garden-tab flex items-center gap-2"
-                    >
-                        <Sparkles className="h-4 w-4" />
-                        <span>Generate Schedule</span>
-                    </TabsTrigger>
-                </TabsList>
+                <div className="overflow-x-auto">
+                    <TabsList className="mb-6 w-full">
+                        <TabsTrigger
+                            value="chat"
+                            className="garden-tab flex items-center gap-2"
+                        >
+                            <Bot className="h-4 w-4" />
+                            <span>Plant Chat</span>
+                        </TabsTrigger>
+                        <TabsTrigger
+                            value="identify"
+                            className="garden-tab flex items-center gap-2"
+                        >
+                            <Camera className="h-4 w-4" />
+                            <span>Identify Plant</span>
+                        </TabsTrigger>
+                        <TabsTrigger
+                            value="schedule"
+                            className="garden-tab flex items-center gap-2"
+                        >
+                            <Sparkles className="h-4 w-4" />
+                            <span>Generate Schedule</span>
+                        </TabsTrigger>
+                    </TabsList>
+                </div>
 
                 <TabsContent value="chat">
                     <PlantChat />
