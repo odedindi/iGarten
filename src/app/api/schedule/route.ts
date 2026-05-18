@@ -1,5 +1,5 @@
 import { generateObject } from "ai";
-import { DEFAULT_CHAT_MODEL, getChatModel } from "@/lib/ai/config";
+import { SCHEDULE_MODEL, getChatModel } from "@/lib/ai/config";
 import { SCHEDULE_SYSTEM_PROMPT } from "@/lib/ai/prompts";
 import { z } from "zod";
 import { extractQuotaHeaders } from "@/lib/ai/rate-limits";
@@ -21,11 +21,8 @@ export async function POST(req: Request) {
     console.log("[Schedule API] POST request received");
 
     try {
-        const { gardenContext, model } = await req.json();
-        const selectedModel =
-            typeof model === "string" && model.length > 0
-                ? model
-                : DEFAULT_CHAT_MODEL;
+        const { gardenContext } = await req.json();
+        const selectedModel = SCHEDULE_MODEL;
 
         console.log(
             "[Schedule API] Garden context length:",

@@ -32,8 +32,11 @@ export function RichTextEditorModal({
 
     // Update content when initialContent changes
     useEffect(() => {
-        setContent(initialContent);
-        setHasChanges(false);
+        const resetConetnt = () => {
+            setContent(initialContent);
+            setHasChanges(false);
+        };
+        resetConetnt();
     }, [initialContent]);
 
     const handleContentChange = (newContent: string) => {

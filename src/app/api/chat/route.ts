@@ -1,5 +1,5 @@
 import { streamText } from "ai";
-import { DEFAULT_CHAT_MODEL, getChatModel } from "@/lib/ai/config";
+import { CHAT_MODEL, getChatModel } from "@/lib/ai/config";
 import { CHAT_SYSTEM_PROMPT } from "@/lib/ai/prompts";
 import { extractQuotaHeaders } from "@/lib/ai/rate-limits";
 
@@ -23,15 +23,12 @@ function buildQuotaExceededMessage(retrySeconds: number | null) {
 
 export async function POST(req: Request) {
     const startTime = Date.now();
-    let selectedModel = DEFAULT_CHAT_MODEL;
+    let selectedModel = CHAT_MODEL;
 
     try {
         const body = await req.json();
-        const { messages, gardenContext, model } = body;
-        selectedModel =
-            typeof model === "string" && model.length > 0
-                ? model
-                : DEFAULT_CHAT_MODEL;
+        const { messages, gardenContext } = body;
+        selectedModel = CHAT_MODEL;
 
         const systemPrompt = `${CHAT_SYSTEM_PROMPT}\n\n${gardenContext}`;
         const result = streamText({

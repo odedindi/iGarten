@@ -8,22 +8,13 @@ import {
     type IdentifyHistoryRecord,
 } from "../lib/ai/history";
 import { parseAiQuotaHeaders, type AiQuotaState } from "@/lib/ai/rate-limits";
-import { useAiModels } from "@/hooks/use-ai-models";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from "@/components/ui/select";
 import { Camera, Upload, Loader2, Leaf } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import { AiQuotaGarden } from "@/components/ai-quota-garden";
 
 const MAX_IDENTIFY_HISTORY = 10;
-const MODEL_PREFERENCE_KEY = "ig-ai-selected-model";
 
 interface IdentifyHistoryEntry {
     id: string;
@@ -40,14 +31,7 @@ export function PlantIdentifier() {
     const [sourceLabel, setSourceLabel] = useState<string>("Uploaded image");
     const [history, setHistory] = useState<IdentifyHistoryEntry[]>([]);
     const [historyLoaded, setHistoryLoaded] = useState(false);
-    const [selectedModel, setSelectedModel] = useState<string>("");
     const [quota, setQuota] = useState<AiQuotaState | null>(null);
-    const modelInitializedRef = useRef(false);
-    const {
-        models: availableModels,
-        defaultModel,
-        isLoading: modelsLoading,
-    } = useAiModels("identify");
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
@@ -77,38 +61,6 @@ export function PlantIdentifier() {
 
         void saveIdentifyHistory(history as IdentifyHistoryRecord[]);
     }, [history, historyLoaded]);
-
-    useEffect(() => {
-        if (availableModels.length === 0) {
-            return;
-        }
-
-        setSelectedModel((current) => {
-            if (
-                modelInitializedRef.current &&
-                current &&
-                availableModels.some((model) => model.id === current)
-            ) {
-                return current;
-            }
-
-            const storedModel =
-                window.localStorage.getItem(MODEL_PREFERENCE_KEY);
-            const preferredModel =
-                storedModel &&
-                availableModels.some((model) => model.id === storedModel)
-                    ? storedModel
-                    : (defaultModel ?? availableModels[0]?.id ?? "");
-
-            modelInitializedRef.current = true;
-            return preferredModel;
-        });
-    }, [availableModels, defaultModel]);
-
-    const handleModelChange = (value: string) => {
-        setSelectedModel(value);
-        window.localStorage.setItem(MODEL_PREFERENCE_KEY, value);
-    };
 
     const handleFile = (file: File) => {
         if (!file.type.startsWith("image/")) {
@@ -163,7 +115,6 @@ export function PlantIdentifier() {
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     image,
-                    model: selectedModel || undefined,
                 }),
             });
 
@@ -221,22 +172,6 @@ export function PlantIdentifier() {
                     <Camera className="h-5 w-5" />
                     Identify Plant
                 </CardTitle>
-                <Select
-                    value={selectedModel}
-                    onValueChange={handleModelChange}
-                    disabled={modelsLoading || loading}
-                >
-                    <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Select AI model" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        {availableModels.map((model) => (
-                            <SelectItem key={model.id} value={model.id}>
-                                {model.displayName}
-                            </SelectItem>
-                        ))}
-                    </SelectContent>
-                </Select>
             </CardHeader>
             <CardContent className="space-y-4">
                 <AiQuotaGarden quota={quota} />

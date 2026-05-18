@@ -1,10 +1,9 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useTaskStore } from "@/lib/task-store";
 import { buildGardenContext } from "@/lib/ai/garden-context";
 import { parseAiQuotaHeaders, type AiQuotaState } from "@/lib/ai/rate-limits";
-import { useAiModels } from "@/hooks/use-ai-models";
 import {
     loadScheduleHistory,
     prependWithLimit,
@@ -14,13 +13,6 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from "@/components/ui/select";
 import {
     Accordion,
     AccordionContent,
@@ -38,7 +30,6 @@ import type { TaskPriority } from "@/lib/task-store";
 import { AiQuotaGarden } from "@/components/ai-quota-garden";
 
 const MAX_SCHEDULE_HISTORY = 10;
-const MODEL_PREFERENCE_KEY = "ig-ai-selected-model";
 
 interface GeneratedTask {
     title: string;
@@ -62,14 +53,7 @@ export function CareSchedule() {
     const [error, setError] = useState<string | null>(null);
     const [history, setHistory] = useState<ScheduleHistoryEntry[]>([]);
     const [historyLoaded, setHistoryLoaded] = useState(false);
-    const [selectedModel, setSelectedModel] = useState<string>("");
     const [quota, setQuota] = useState<AiQuotaState | null>(null);
-    const modelInitializedRef = useRef(false);
-    const {
-        models: availableModels,
-        defaultModel,
-        isLoading: modelsLoading,
-    } = useAiModels("schedule");
 
     useEffect(() => {
         let cancelled = false;
@@ -99,38 +83,6 @@ export function CareSchedule() {
         void saveScheduleHistory(history as ScheduleHistoryRecord[]);
     }, [history, historyLoaded]);
 
-    useEffect(() => {
-        if (availableModels.length === 0) {
-            return;
-        }
-
-        setSelectedModel((current) => {
-            if (
-                modelInitializedRef.current &&
-                current &&
-                availableModels.some((model) => model.id === current)
-            ) {
-                return current;
-            }
-
-            const storedModel =
-                window.localStorage.getItem(MODEL_PREFERENCE_KEY);
-            const preferredModel =
-                storedModel &&
-                availableModels.some((model) => model.id === storedModel)
-                    ? storedModel
-                    : (defaultModel ?? availableModels[0]?.id ?? "");
-
-            modelInitializedRef.current = true;
-            return preferredModel;
-        });
-    }, [availableModels, defaultModel]);
-
-    const handleModelChange = (value: string) => {
-        setSelectedModel(value);
-        window.localStorage.setItem(MODEL_PREFERENCE_KEY, value);
-    };
-
     const handleGenerate = async () => {
         setLoading(true);
         setError(null);
@@ -141,7 +93,6 @@ export function CareSchedule() {
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     gardenContext,
-                    model: selectedModel || undefined,
                 }),
             });
 
@@ -254,22 +205,6 @@ export function CareSchedule() {
                         )}
                     </Button>
                 </div>
-                <Select
-                    value={selectedModel}
-                    onValueChange={handleModelChange}
-                    disabled={modelsLoading || loading}
-                >
-                    <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Select AI model" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        {availableModels.map((model) => (
-                            <SelectItem key={model.id} value={model.id}>
-                                {model.displayName}
-                            </SelectItem>
-                        ))}
-                    </SelectContent>
-                </Select>
             </CardHeader>
             <CardContent>
                 <AiQuotaGarden quota={quota} className="mb-4" />

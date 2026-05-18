@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { format, parseISO } from "date-fns";
 import type { SortConfig, FilterConfig, FilterValueType } from "@/lib/types";
 
@@ -243,17 +243,15 @@ export function useTableData<T extends TableData>({
     // Calculate pagination values
     const totalItems = sortedData.length;
     const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
-
     // Adjust current page if it's out of bounds
-    useEffect(() => {
-        if (currentPage > totalPages) setCurrentPage(totalPages);
-    }, [currentPage, totalPages]);
+    const effectiveCurrentPage =
+        currentPage > totalPages ? totalPages : currentPage;
 
     // Get the current page of data
     const paginatedData = useMemo(() => {
-        const startIndex = (currentPage - 1) * pageSize;
+        const startIndex = (effectiveCurrentPage - 1) * pageSize;
         return sortedData.slice(startIndex, startIndex + pageSize);
-    }, [sortedData, currentPage, pageSize]);
+    }, [sortedData, effectiveCurrentPage, pageSize]);
 
     return {
         processedData: paginatedData,
@@ -263,7 +261,7 @@ export function useTableData<T extends TableData>({
         showFilters,
         selectedRows,
         pagination: {
-            currentPage,
+            currentPage: effectiveCurrentPage,
             pageSize,
             totalPages,
             totalItems,

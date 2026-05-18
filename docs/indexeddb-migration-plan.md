@@ -51,7 +51,6 @@ Database:
 Object stores:
 
 1. chat_history
-
     - Key path: id (string)
     - Fields: id, createdAt, updatedAt, role, content, threadId
     - Indexes:
@@ -59,7 +58,6 @@ Object stores:
         - by_threadId_createdAt
 
 2. schedule_history
-
     - Key path: id (string)
     - Fields: id, createdAt, tasks[]
     - Indexes:
@@ -199,22 +197,18 @@ No expected regressions in UI if hydration is handled with existing loading guar
 ## Unknowns (Require Exploration)
 
 1. Browser quota behavior by platform and private mode
-
     - Unknown exact limits and eviction behavior for target user browsers
     - Extension when reached: add quota diagnostics + user-facing messaging
 
 2. Migration ordering and race conditions during first mount
-
     - Unknown if concurrent component mounts could duplicate migration work
     - Extension when reached: single-flight migration lock via metadata store
 
 3. Whether to introduce multi-thread chat model now or later
-
     - Unknown product direction for separate chat sessions
     - Extension when reached: add thread list store and activeThread pointer
 
 4. Should we support export/import of AI history
-
     - Unknown if users need backup/portability for AI history
     - Extension when reached: JSON export/import flow with validation
 
@@ -225,21 +219,17 @@ No expected regressions in UI if hydration is handled with existing loading guar
 ## Extension Backlog (Deferred)
 
 1. Image metadata history enrichment
-
     - Add filename, mime type, dimensions, and hash
     - Still no binary storage
 
 2. Optional thumbnail/blob storage
-
     - Store compressed thumbnail blobs in separate store
     - Add retention limit and total-size guardrails
 
 3. Full-text search over AI histories
-
     - Add lightweight search index or on-read filtering
 
 4. Data lifecycle jobs
-
     - Automatic pruning by age/count
 
 5. Observability

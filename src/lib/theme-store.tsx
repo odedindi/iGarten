@@ -4,6 +4,7 @@ import type React from "react";
 
 import { createContext, useContext, useEffect, useState } from "react";
 import { themeOptions, getThemeByName, type ThemeOption } from "@/lib/themes";
+import useSWR from "swr";
 
 type ThemeMode = "light" | "dark";
 
@@ -18,27 +19,37 @@ interface ThemeContextType {
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
+const storedThemeFetcher = () => {
+    const storedTheme = localStorage.getItem("garden_theme");
+    if (storedTheme) return getThemeByName(storedTheme);
+
+    return themeOptions[0];
+};
+
+const storedModeFetcher = () => {
+    const storedMode = localStorage.getItem("garden_theme_mode");
+    if (storedMode === "dark" || storedMode === "light") return storedMode;
+
+    return "light" satisfies ThemeMode;
+};
+
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-    const [theme, setThemeState] = useState<ThemeOption>(themeOptions[0]);
-    const [mode, setModeState] = useState<ThemeMode>("light");
-    const [loaded, setLoaded] = useState(false);
+    // const [theme, setThemeState] = useState<ThemeOption>(themeOptions[0]);
+    // const [mode, setModeState] = useState<ThemeMode>("light");
+    // const [loaded, setLoaded] = useState(false);
     const [isThemeLoaded, setIsThemeLoaded] = useState(false);
 
-    useEffect(() => {
-        // Load theme from localStorage
-        const storedTheme = localStorage.getItem("garden_theme");
-        if (storedTheme) {
-            setThemeState(getThemeByName(storedTheme));
-        }
+    const { data: theme = themeOptions[0], ...themeQuery } = useSWR(
+        `garden_theme`,
+        storedThemeFetcher
+    );
 
-        // Load mode from localStorage
-        const storedMode = localStorage.getItem("garden_theme_mode");
-        if (storedMode === "dark" || storedMode === "light") {
-            setModeState(storedMode);
-        }
+    const { data: mode = "light", ...modeQuery } = useSWR(
+        `garden_theme_mode`,
+        storedModeFetcher
+    );
 
-        setLoaded(true);
-    }, []);
+    const loaded = !modeQuery.isLoading && !themeQuery.isLoading;
 
     useEffect(() => {
         if (!loaded) return;
@@ -80,17 +91,17 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
     const setTheme = (themeName: string) => {
         setIsThemeLoaded(false);
-        setThemeState(getThemeByName(themeName));
+        themeQuery.mutate(getThemeByName(themeName));
     };
 
     const setMode = (newMode: ThemeMode) => {
         setIsThemeLoaded(false);
-        setModeState(newMode);
+        modeQuery.mutate(newMode);
     };
 
     const toggleMode = () => {
         setIsThemeLoaded(false);
-        setModeState((prev) => (prev === "light" ? "dark" : "light"));
+        modeQuery.mutate((prev) => (prev === "light" ? "dark" : "light"));
     };
 
     return (

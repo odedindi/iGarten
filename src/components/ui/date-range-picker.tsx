@@ -14,8 +14,10 @@ import {
     PopoverTrigger,
 } from "@/components/ui/popover";
 
-interface DateRangePickerProps
-    extends Omit<React.HTMLAttributes<HTMLDivElement>, "onChange"> {
+interface DateRangePickerProps extends Omit<
+    React.HTMLAttributes<HTMLDivElement>,
+    "onChange"
+> {
     value: DateRange | undefined;
     onChange: (value: DateRange | undefined) => void;
 }
@@ -54,7 +56,7 @@ export function DateRangePicker({
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">
                     <Calendar
-                        initialFocus
+                        autoFocus
                         mode="range"
                         defaultMonth={value?.from}
                         selected={value}

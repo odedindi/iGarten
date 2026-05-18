@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { DEFAULT_CHAT_MODEL, FALLBACK_CHAT_MODELS } from "@/lib/ai/config";
+import { CHAT_MODEL, IDENTIFY_MODEL, SCHEDULE_MODEL } from "@/lib/ai/config";
 
 type GoogleModel = {
     name: string;
@@ -66,17 +66,26 @@ function supportsFeature(
 }
 
 function fallbackModels(feature: "chat" | "schedule" | "identify") {
-    return FALLBACK_CHAT_MODELS.filter((id) => {
-        if (feature === "identify") {
-            return !id.toLowerCase().includes("lite");
-        }
-        return true;
-    }).map((id) => ({
-        id,
-        displayName: id,
-        inputTokenLimit: null,
-        outputTokenLimit: null,
-    }));
+    const modelId =
+        feature === "identify"
+            ? IDENTIFY_MODEL
+            : feature === "schedule"
+              ? SCHEDULE_MODEL
+              : CHAT_MODEL;
+    return [
+        {
+            id: modelId,
+            displayName: modelId,
+            inputTokenLimit: null,
+            outputTokenLimit: null,
+        },
+    ];
+}
+
+function getDefaultModelForFeature(feature: "chat" | "schedule" | "identify") {
+    if (feature === "identify") return IDENTIFY_MODEL;
+    if (feature === "schedule") return SCHEDULE_MODEL;
+    return CHAT_MODEL;
 }
 
 export async function GET(req: Request) {
@@ -97,7 +106,7 @@ export async function GET(req: Request) {
         return NextResponse.json(
             {
                 models: fallbackModels(feature),
-                defaultModel: DEFAULT_CHAT_MODEL,
+                defaultModel: getDefaultModelForFeature(feature),
                 source: "fallback",
                 warning: "Missing GOOGLE_GENERATIVE_AI_API_KEY.",
                 filters: { feature, tier, view },
@@ -160,7 +169,7 @@ export async function GET(req: Request) {
         if (models.length === 0) {
             return NextResponse.json({
                 models: fallbackModels(feature),
-                defaultModel: DEFAULT_CHAT_MODEL,
+                defaultModel: getDefaultModelForFeature(feature),
                 source: "fallback",
                 warning: "No chat-capable models returned by Google API.",
                 filters: { feature, tier, view },
@@ -176,8 +185,9 @@ export async function GET(req: Request) {
         }
 
         const defaultModel =
-            models.find((model) => model.id === DEFAULT_CHAT_MODEL)?.id ??
-            models[0].id;
+            models.find(
+                (model) => model.id === getDefaultModelForFeature(feature)
+            )?.id ?? models[0].id;
 
         return NextResponse.json({
             models,
@@ -199,7 +209,7 @@ export async function GET(req: Request) {
         return NextResponse.json(
             {
                 models: fallbackModels(feature),
-                defaultModel: DEFAULT_CHAT_MODEL,
+                defaultModel: getDefaultModelForFeature(feature),
                 source: "fallback",
                 warning: "Failed to query Google models API.",
                 filters: { feature, tier, view },

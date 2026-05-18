@@ -1,7 +1,7 @@
 "use client";
 
 import { FC, useRef } from "react";
-import { HTMLMotionProps, motion } from "motion/react";
+import { HTMLMotionProps, motion, type Variants } from "motion/react";
 import { cn } from "@/lib/utils";
 
 type AnimationType =
@@ -23,7 +23,10 @@ interface Props extends HTMLMotionProps<"div"> {
     role?: string;
 }
 
-const animationVariants = {
+const animationVariants: Record<
+    AnimationType,
+    { container: Variants; child: Variants }
+> = {
     fadeIn: {
         container: {
             hidden: { opacity: 0 },
@@ -35,7 +38,7 @@ const animationVariants = {
         child: {
             visible: {
                 opacity: 1,
-                y: [0, -10, 0],
+                y: 0,
                 transition: {
                     type: "spring",
                     damping: 12,

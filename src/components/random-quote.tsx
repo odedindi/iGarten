@@ -12,12 +12,11 @@ const gardenQuotes = [
     "Garden as though you will live forever. — William Kent",
 ];
 
+const random = () =>
+    gardenQuotes[Math.floor(Math.random() * gardenQuotes.length)];
 export default function RandomQuote() {
     // Get a random quote
-    const randomQuote = useMemo(
-        () => gardenQuotes[Math.floor(Math.random() * gardenQuotes.length)],
-        []
-    );
+    const randomQuote = useMemo(() => random(), []);
 
     return <div className="garden-quote mb-4">{randomQuote}</div>;
 }

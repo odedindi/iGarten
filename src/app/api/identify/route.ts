@@ -1,5 +1,5 @@
 import { generateText } from "ai";
-import { DEFAULT_CHAT_MODEL, getChatModel } from "@/lib/ai/config";
+import { IDENTIFY_MODEL, getChatModel } from "@/lib/ai/config";
 import { IDENTIFY_SYSTEM_PROMPT } from "@/lib/ai/prompts";
 import { extractQuotaHeaders } from "@/lib/ai/rate-limits";
 
@@ -8,15 +8,12 @@ export async function POST(req: Request) {
     console.log("[Identify API] POST request received");
 
     try {
-        const { image, model } = await req.json();
-        const selectedModel =
-            typeof model === "string" && model.length > 0
-                ? model
-                : DEFAULT_CHAT_MODEL;
+        const { image } = await req.json();
+        const selectedModel = IDENTIFY_MODEL;
 
         console.log("[Identify API] Image provided:", !!image);
         console.log("[Identify API] Image data length:", image?.length ?? 0);
-        console.log("[Identify API] Selected model:", selectedModel);
+        console.log("[Identify API] Model:", selectedModel);
 
         if (!image) {
             console.log("[Identify API] No image — returning 400");

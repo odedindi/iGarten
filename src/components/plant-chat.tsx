@@ -4,7 +4,6 @@ import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { useTaskStore } from "@/lib/task-store";
 import { buildGardenContext } from "@/lib/ai/garden-context";
 import { parseAiQuotaHeaders, type AiQuotaState } from "@/lib/ai/rate-limits";
-import { useAiModels } from "@/hooks/use-ai-models";
 import {
     loadChatConversations,
     saveChatConversations,
@@ -38,7 +37,6 @@ import { gsap } from "gsap";
 const MAX_MODEL_MESSAGES = 24;
 const MAX_MODEL_CHARS = 12000;
 const MIN_MESSAGES_TO_KEEP = 6;
-const MODEL_PREFERENCE_KEY = "ig-ai-selected-model";
 
 function createConversation(): ChatConversationRecord {
     const now = new Date().toISOString();
@@ -97,7 +95,6 @@ export function PlantChat() {
     const scrollAreaRef = useRef<HTMLDivElement>(null);
     const viewportRef = useRef<HTMLDivElement | null>(null);
     const bottomSentinelRef = useRef<HTMLDivElement>(null);
-    const modelInitializedRef = useRef(false);
     const [conversations, setConversations] = useState<
         ChatConversationRecord[]
     >([]);
@@ -108,14 +105,8 @@ export function PlantChat() {
     const [isLoading, setIsLoading] = useState(false);
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
     const [historyLoaded, setHistoryLoaded] = useState(false);
-    const [selectedModel, setSelectedModel] = useState<string>("");
     const [quota, setQuota] = useState<AiQuotaState | null>(null);
     const [autoScrollEnabled, setAutoScrollEnabled] = useState(true);
-    const {
-        models: availableModels,
-        defaultModel,
-        isLoading: modelsLoading,
-    } = useAiModels("chat");
 
     const activeConversation = conversations.find(
         (conversation) => conversation.id === activeConversationId
@@ -162,38 +153,6 @@ export function PlantChat() {
 
         void saveChatConversations(conversations);
     }, [conversations, historyLoaded]);
-
-    useEffect(() => {
-        if (availableModels.length === 0) {
-            return;
-        }
-
-        setSelectedModel((current) => {
-            if (
-                modelInitializedRef.current &&
-                current &&
-                availableModels.some((model) => model.id === current)
-            ) {
-                return current;
-            }
-
-            const storedModel =
-                window.localStorage.getItem(MODEL_PREFERENCE_KEY);
-            const preferredModel =
-                storedModel &&
-                availableModels.some((model) => model.id === storedModel)
-                    ? storedModel
-                    : (defaultModel ?? availableModels[0]?.id ?? "");
-
-            modelInitializedRef.current = true;
-            return preferredModel;
-        });
-    }, [availableModels, defaultModel]);
-
-    const handleModelChange = (value: string) => {
-        setSelectedModel(value);
-        window.localStorage.setItem(MODEL_PREFERENCE_KEY, value);
-    };
 
     const scrollToBottom = useCallback((immediate = false) => {
         const viewport = viewportRef.current;
@@ -409,7 +368,6 @@ export function PlantChat() {
                 body: JSON.stringify({
                     messages: messagesForModel,
                     gardenContext,
-                    model: selectedModel || undefined,
                 }),
             });
 
@@ -553,22 +511,6 @@ export function PlantChat() {
                                 value={conversation.id}
                             >
                                 {conversation.title}
-                            </SelectItem>
-                        ))}
-                    </SelectContent>
-                </Select>
-                <Select
-                    value={selectedModel}
-                    onValueChange={handleModelChange}
-                    disabled={modelsLoading || isLoading}
-                >
-                    <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Select AI model" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        {availableModels.map((model) => (
-                            <SelectItem key={model.id} value={model.id}>
-                                {model.displayName}
                             </SelectItem>
                         ))}
                     </SelectContent>
