@@ -8,8 +8,8 @@ import { Bot, Camera, Sparkles } from "lucide-react";
 
 export default function AIPage() {
     return (
-        <div className="container mx-auto mb-6 max-w-6xl overflow-auto p-3 sm:p-6">
-            <div className="garden-header mb-4 rounded-lg p-4 sm:mb-6 sm:p-6">
+        <div className="container mx-auto mb-6 max-w-6xl overflow-auto p-6 sm:p-3">
+            <div className="garden-header rounded-lg p-6 sm:mx-6">
                 <h1 className="text-primary relative z-10 text-2xl font-bold sm:text-3xl">
                     AI Garden Assistant
                 </h1>
@@ -21,7 +21,7 @@ export default function AIPage() {
 
             <Tabs defaultValue="chat" className="garden-tabs">
                 <div className="overflow-x-auto">
-                    <TabsList className="mb-6 w-full">
+                    <TabsList className="my-6 w-full">
                         <TabsTrigger
                             value="chat"
                             className="garden-tab flex items-center gap-2"

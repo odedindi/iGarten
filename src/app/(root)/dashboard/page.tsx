@@ -136,8 +136,8 @@ export default function DashboardPage() {
         totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
 
     return (
-        <div className="container mx-auto space-y-6 overflow-auto p-6">
-            <div className="garden-header rounded-lg p-6">
+        <div className="container mx-auto mb-6 max-w-6xl overflow-auto p-6 sm:p-3">
+            <div className="garden-header rounded-lg p-6 sm:mx-6">
                 <h1 className="text-primary relative z-10 text-3xl font-bold">
                     Garden Dashboard
                 </h1>
@@ -147,7 +147,7 @@ export default function DashboardPage() {
                 </p>
             </div>
 
-            <div className="flex flex-col items-start justify-between gap-2 md:flex-row md:items-center">
+            <div className="my-6 flex flex-col items-start justify-between gap-2 md:flex-row md:items-center">
                 <div className="flex items-center gap-2">
                     <Label htmlFor="demo-mode" className="cursor-pointer">
                         Mock data
@@ -175,7 +175,7 @@ export default function DashboardPage() {
                         Time Range:
                     </span>
                     <Select value={timeRange} onValueChange={setTimeRange}>
-                        <SelectTrigger className="garden-input w-[180px]">
+                        <SelectTrigger className="garden-input w-45">
                             <SelectValue placeholder="Select time range" />
                         </SelectTrigger>
                         <SelectContent>
@@ -189,7 +189,7 @@ export default function DashboardPage() {
             </div>
 
             {demoSettings.enabled && (
-                <div className="bg-primary/10 border-primary/20 flex items-start gap-2 rounded-md border p-4">
+                <div className="bg-primary/10 border-primary/20 mb-6 flex items-start gap-2 rounded-md border p-4">
                     <AlertCircle className="text-primary mt-0.5 h-5 w-5" />
                     <div>
                         <h3 className="text-primary font-medium">
@@ -263,7 +263,7 @@ export default function DashboardPage() {
                 </Card>
             </div>
 
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-1">
+            <div className="my-6 grid grid-cols-1 gap-4 md:grid-cols-1">
                 <Card className="garden-card">
                     <CardHeader>
                         <CardTitle className="text-primary">

@@ -22,7 +22,7 @@ import {
     Sprout,
     Flower2,
 } from "lucide-react";
-import { format } from "date-fns";
+import { format, isValid } from "date-fns";
 
 const DeletedTaskItem = memo(function DeletedTaskItem({
     task,
@@ -88,7 +88,7 @@ const DeletedTaskItem = memo(function DeletedTaskItem({
                     </div>
                     <div className="text-muted-foreground text-xs">
                         Deleted:{" "}
-                        {task.deletedAt
+                        {task.deletedAt && isValid(task.deletedAt)
                             ? format(new Date(task.deletedAt), "PPP 'at' p")
                             : "Unknown"}
                     </div>
@@ -160,11 +160,13 @@ const DeletedHarvestItem = memo(function DeletedHarvestItem({
                     </div>
                     <div className="text-muted-foreground text-xs">
                         Harvested:{" "}
-                        {format(new Date(harvest.dateHarvested), "PPP")}
+                        {isValid(harvest.dateHarvested)
+                            ? format(new Date(harvest.dateHarvested), "PPP")
+                            : "Unknown"}
                     </div>
                     <div className="text-muted-foreground text-xs">
                         Deleted:{" "}
-                        {harvest.deletedAt
+                        {harvest.deletedAt && isValid(harvest.deletedAt)
                             ? format(new Date(harvest.deletedAt), "PPP 'at' p")
                             : "Unknown"}
                     </div>
@@ -271,8 +273,8 @@ export default function TrashPage() {
     }, [selectedHarvests, permanentDeleteHarvest]);
 
     return (
-        <div className="container mx-auto space-y-6 overflow-auto p-6">
-            <div className="garden-header rounded-lg p-6">
+        <div className="container mx-auto mb-6 max-w-6xl overflow-auto p-6 sm:p-3">
+            <div className="garden-header rounded-lg p-6 sm:mx-6">
                 <h1 className="text-primary relative z-10 flex items-center gap-2 text-3xl font-bold">
                     <Trash2 className="h-8 w-8" />
                     Garbage Bin
@@ -284,7 +286,7 @@ export default function TrashPage() {
             </div>
 
             <Tabs defaultValue="tasks" className="w-full">
-                <div className="overflow-x-auto">
+                <div className="my-6 overflow-x-auto">
                     <TabsList className="grid w-full grid-cols-2">
                         <TabsTrigger
                             value="tasks"
@@ -303,7 +305,7 @@ export default function TrashPage() {
                     </TabsList>
                 </div>
 
-                <TabsContent value="tasks" className="mt-6">
+                <TabsContent value="tasks">
                     {deletedTasks.length > 0 && (
                         <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap md:items-center">
                             <Button
@@ -389,7 +391,7 @@ export default function TrashPage() {
                     )}
                 </TabsContent>
 
-                <TabsContent value="harvests" className="mt-6">
+                <TabsContent value="harvests">
                     {deletedHarvests.length > 0 && (
                         <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
                             <Button
