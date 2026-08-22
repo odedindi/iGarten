@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useTaskStore, type Task, type Harvest } from "@/lib/task-store";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -32,7 +32,14 @@ export default function DashboardPage() {
         clearDemoData,
     } = useTaskStore();
     const [timeRange, setTimeRange] = useState<string>("all");
-
+    const effectiveTasks = useMemo(
+        () => tasks.filter((t) => !t.deleted),
+        [tasks]
+    );
+    const effectiveHarvests = useMemo(
+        () => harvests.filter((h) => !h.deleted),
+        [harvests]
+    );
     // Use real or demo data based on settings
     // const useRealData = !demoSettings.enabled
 
@@ -40,7 +47,10 @@ export default function DashboardPage() {
         updateDemoSettings({ enabled });
 
         // If enabling demo mode and no demo data exists, generate it
-        if (enabled && (tasks.length === 0 || harvests.length === 0)) {
+        if (
+            enabled &&
+            (effectiveTasks.length === 0 || effectiveHarvests.length === 0)
+        ) {
             generateDemoData();
         }
         // If disabling demo mode, clear the demo data
@@ -50,7 +60,7 @@ export default function DashboardPage() {
     };
 
     const getFilteredTasks = (): Task[] => {
-        if (timeRange === "all") return tasks;
+        if (timeRange === "all") return effectiveTasks;
 
         const today = new Date();
         const startDate = subDays(
@@ -71,7 +81,7 @@ export default function DashboardPage() {
     };
 
     const getFilteredHarvests = (): Harvest[] => {
-        if (timeRange === "all") return harvests;
+        if (timeRange === "all") return effectiveHarvests;
 
         const today = new Date();
         const startDate = subDays(
