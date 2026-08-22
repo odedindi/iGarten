@@ -24,6 +24,21 @@ import {
 } from "lucide-react";
 import { format, isValid } from "date-fns";
 
+/**
+ * Safely formats a date value, returning a fallback if it's missing or invalid.
+ */
+export function formatDateSafe(
+    date: Date | string | number | null | undefined,
+    formatStr: string = "PPP 'at' p",
+    fallback: string = "Unknown"
+): string {
+    if (!date) return fallback;
+
+    const parsed = date instanceof Date ? date : new Date(date);
+
+    return isValid(parsed) ? format(parsed, formatStr) : fallback;
+}
+
 const DeletedTaskItem = memo(function DeletedTaskItem({
     task,
     onRestore,
@@ -87,10 +102,7 @@ const DeletedTaskItem = memo(function DeletedTaskItem({
                         ))}
                     </div>
                     <div className="text-muted-foreground text-xs">
-                        Deleted:{" "}
-                        {task.deletedAt && isValid(task.deletedAt)
-                            ? format(new Date(task.deletedAt), "PPP 'at' p")
-                            : "Unknown"}
+                        Deleted: {formatDateSafe(task.deletedAt)}
                     </div>
                 </div>
             </CardContent>
@@ -160,15 +172,10 @@ const DeletedHarvestItem = memo(function DeletedHarvestItem({
                     </div>
                     <div className="text-muted-foreground text-xs">
                         Harvested:{" "}
-                        {isValid(harvest.dateHarvested)
-                            ? format(new Date(harvest.dateHarvested), "PPP")
-                            : "Unknown"}
+                        {formatDateSafe(harvest.dateHarvested, "PPP")}
                     </div>
                     <div className="text-muted-foreground text-xs">
-                        Deleted:{" "}
-                        {harvest.deletedAt && isValid(harvest.deletedAt)
-                            ? format(new Date(harvest.deletedAt), "PPP 'at' p")
-                            : "Unknown"}
+                        Deleted: {formatDateSafe(harvest.deletedAt)}
                     </div>
                 </div>
             </CardContent>
