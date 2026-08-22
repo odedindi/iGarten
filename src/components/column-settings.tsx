@@ -131,9 +131,6 @@ export function ColumnSettings({
                     className="garden-input flex items-center gap-2"
                 >
                     <Settings className="garden-icon h-4 w-4" />
-                    {type === "tasks"
-                        ? "Garden Task Columns"
-                        : "Harvest Log Columns"}
                 </Button>
             </DialogTrigger>
             <DialogContent className="dialog-content sm:max-w-md">
