@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, memo } from "react";
+import { useState, useCallback, memo, useMemo } from "react";
 import { Checkbox } from "@/components/ui/checkbox";
 
 import {
@@ -12,7 +12,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { type Task, type Harvest, useTaskStore } from "@/lib/task-store";
 import {
     MoreHorizontal,
@@ -23,6 +22,13 @@ import {
     Flower2,
 } from "lucide-react";
 import { formatDateSafe } from "@/lib/utils";
+import { isValid } from "date-fns";
+
+const toTime = (d: Date | string | number | null | undefined): number => {
+    if (!d) return 0;
+    const parsed = d instanceof Date ? d : new Date(d);
+    return isValid(parsed) ? parsed.getTime() : 0;
+};
 
 const DeletedTaskItem = memo(function DeletedTaskItem({
     task,
@@ -34,7 +40,7 @@ const DeletedTaskItem = memo(function DeletedTaskItem({
     onPermanentDelete: (id: string) => void;
 }) {
     return (
-        <Card className="mb-4 w-full gap-0">
+        <Card className="group-hover:border-primary/50 mb-4 w-full gap-0">
             <CardHeader className="pb-1">
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
@@ -87,6 +93,9 @@ const DeletedTaskItem = memo(function DeletedTaskItem({
                         ))}
                     </div>
                     <div className="text-muted-foreground text-xs">
+                        Created: {formatDateSafe(task.dateCreated, "PPP")}
+                    </div>
+                    <div className="text-muted-foreground text-xs">
                         Deleted: {formatDateSafe(task.deletedAt)}
                     </div>
                 </div>
@@ -105,7 +114,7 @@ const DeletedHarvestItem = memo(function DeletedHarvestItem({
     onPermanentDelete: (id: string) => void;
 }) {
     return (
-        <Card className="mb-4 w-full gap-0">
+        <Card className="group-hover:border-primary/50 mb-4 w-full gap-0">
             <CardHeader className="pb-1">
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
@@ -153,7 +162,9 @@ const DeletedHarvestItem = memo(function DeletedHarvestItem({
                     />
                     <div className="flex flex-wrap gap-2">
                         <Badge variant="outline">{harvest.quality}</Badge>
-                        <Badge variant="outline">{harvest.weather}</Badge>
+                        {harvest.weather && (
+                            <Badge variant="outline">{harvest.weather}</Badge>
+                        )}
                     </div>
                     <div className="text-muted-foreground text-xs">
                         Harvested:{" "}
@@ -264,6 +275,18 @@ export default function TrashPage() {
         setSelectedHarvests([]);
     }, [selectedHarvests, permanentDeleteHarvest]);
 
+    const allDeletedItems = useMemo(
+        () =>
+            [
+                ...deletedTasks.map((t) => ({ ...t, type: "task" as const })),
+                ...deletedHarvests.map((h) => ({
+                    ...h,
+                    type: "harvest" as const,
+                })),
+            ].sort((a, b) => toTime(b.deletedAt) - toTime(a.deletedAt)),
+        [deletedTasks, deletedHarvests]
+    );
+    const allSelectedItems = selectedTasks.length + selectedHarvests.length;
     return (
         <div className="container mx-auto mb-6 max-w-6xl overflow-auto p-6 sm:p-3">
             <div className="garden-header rounded-lg p-6 sm:mx-6">
@@ -277,203 +300,121 @@ export default function TrashPage() {
                 </p>
             </div>
 
-            <Tabs defaultValue="tasks" className="w-full">
-                <div className="my-6 overflow-x-auto">
-                    <TabsList className="grid w-full grid-cols-2">
-                        <TabsTrigger
-                            value="tasks"
-                            className="flex items-center gap-2"
-                        >
-                            <Sprout className="h-4 w-4" />
-                            Tasks ({deletedTasks.length})
-                        </TabsTrigger>
-                        <TabsTrigger
-                            value="harvests"
-                            className="flex items-center gap-2"
-                        >
-                            <Flower2 className="h-4 w-4" />
-                            Harvests ({deletedHarvests.length})
-                        </TabsTrigger>
-                    </TabsList>
+            {!allDeletedItems.length ? (
+                <div className="py-12 text-center">
+                    <Sprout className="text-muted-foreground mx-auto mb-4 h-12 w-12" />
+                    <h3 className="mb-2 text-lg font-semibold">
+                        No deleted items
+                    </h3>
+                    <p className="text-muted-foreground">
+                        Your garden is safe and sound!
+                    </p>
                 </div>
-
-                <TabsContent value="tasks">
-                    {deletedTasks.length > 0 && (
-                        <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap md:items-center">
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() =>
-                                    handleSelectAllTasks(
-                                        selectedTasks.length !==
-                                            deletedTasks.length
-                                    )
-                                }
-                                className="w-full md:w-auto"
-                            >
-                                {selectedTasks.length === deletedTasks.length
-                                    ? "Deselect All"
-                                    : "Select All"}
-                            </Button>
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={handleBulkRestoreTasks}
-                                className="w-full text-green-600 md:w-auto"
-                                disabled={!selectedTasks.length}
-                            >
-                                <RotateCcw className="mr-2 h-4 w-4" />
-                                Restore Selected{" "}
-                                {selectedTasks.length > 0 &&
-                                    `(${selectedTasks.length})`}
-                            </Button>
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={handleBulkPermanentDeleteTasks}
-                                className="text-destructive w-full md:w-auto"
-                                disabled={!selectedTasks.length}
-                            >
-                                <Trash className="mr-2 h-4 w-4" />
-                                Delete Forever{" "}
-                                {selectedTasks.length > 0 &&
-                                    `(${selectedTasks.length})`}
-                            </Button>
-                        </div>
-                    )}
-
-                    {deletedTasks.length === 0 ? (
-                        <div className="py-12 text-center">
-                            <Sprout className="text-muted-foreground mx-auto mb-4 h-12 w-12" />
-                            <h3 className="mb-2 text-lg font-semibold">
-                                No deleted tasks
-                            </h3>
-                            <p className="text-muted-foreground">
-                                All your garden tasks are safe and sound!
-                            </p>
-                        </div>
-                    ) : (
-                        <div className="space-y-4">
-                            {deletedTasks.map((task) => (
+            ) : (
+                <>
+                    <div className="my-6 flex flex-col gap-2 sm:flex-row sm:flex-wrap md:items-center">
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                                handleSelectAllTasks(
+                                    selectedTasks.length !== deletedTasks.length
+                                );
+                                handleSelectAllHarvests(
+                                    selectedHarvests.length !==
+                                        deletedHarvests.length
+                                );
+                            }}
+                            className="w-full flex-1 md:w-auto"
+                        >
+                            {allSelectedItems === allDeletedItems.length
+                                ? "Deselect All"
+                                : "Select All"}
+                        </Button>
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                                handleBulkRestoreTasks();
+                                handleBulkRestoreHarvests();
+                            }}
+                            className="w-full flex-1 text-green-600 md:w-auto"
+                            disabled={!selectedTasks.length}
+                        >
+                            <RotateCcw className="mr-2 h-4 w-4" />
+                            Restore Selected{" "}
+                            {allSelectedItems > 0 && `(${allSelectedItems})`}
+                        </Button>
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                                handleBulkPermanentDeleteTasks();
+                                handleBulkPermanentDeleteHarvests();
+                            }}
+                            className="text-destructive w-full flex-1 md:w-auto"
+                            disabled={!selectedTasks.length}
+                        >
+                            <Trash className="mr-2 h-4 w-4" />
+                            Delete Forever{" "}
+                            {allSelectedItems > 0 && `(${allSelectedItems})`}
+                        </Button>
+                    </div>
+                    <div className="space-y-4">
+                        {allDeletedItems.map((item) => {
+                            const { type, ...rest } = item;
+                            const isTask = type === "task";
+                            const checked = isTask
+                                ? selectedTasks.includes(item.id)
+                                : selectedHarvests.includes(item.id);
+                            const handleSelect = isTask
+                                ? handleSelectTask
+                                : handleSelectHarvest;
+                            const handleRestore = isTask
+                                ? handleRestoreTask
+                                : handleRestoreHarvest;
+                            const handlePermanentDelete = isTask
+                                ? handlePermanentDeleteTask
+                                : handlePermanentDeleteHarvest;
+                            return (
                                 <div
-                                    key={task.id}
-                                    className="flex items-start gap-3"
+                                    key={item.id}
+                                    className="group flex cursor-pointer items-start gap-3"
+                                    onClick={() =>
+                                        handleSelect(item.id, !checked)
+                                    }
                                 >
                                     <Checkbox
-                                        checked={selectedTasks.includes(
-                                            task.id
-                                        )}
+                                        checked={checked}
                                         onCheckedChange={(checked) =>
-                                            handleSelectTask(task.id, !!checked)
+                                            handleSelect(item.id, !!checked)
                                         }
                                         aria-label="Select item"
                                         className="mt-2"
                                     />
-
-                                    <DeletedTaskItem
-                                        task={task}
-                                        onRestore={handleRestoreTask}
-                                        onPermanentDelete={
-                                            handlePermanentDeleteTask
-                                        }
-                                    />
+                                    {isTask ? (
+                                        <DeletedTaskItem
+                                            task={rest as Task}
+                                            onRestore={handleRestore}
+                                            onPermanentDelete={
+                                                handlePermanentDelete
+                                            }
+                                        />
+                                    ) : (
+                                        <DeletedHarvestItem
+                                            harvest={item as Harvest}
+                                            onRestore={handleRestore}
+                                            onPermanentDelete={
+                                                handlePermanentDelete
+                                            }
+                                        />
+                                    )}
                                 </div>
-                            ))}
-                        </div>
-                    )}
-                </TabsContent>
-
-                <TabsContent value="harvests">
-                    {deletedHarvests.length > 0 && (
-                        <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() =>
-                                    handleSelectAllHarvests(
-                                        selectedHarvests.length !==
-                                            deletedHarvests.length
-                                    )
-                                }
-                                className="w-full sm:w-auto"
-                            >
-                                {selectedHarvests.length ===
-                                deletedHarvests.length
-                                    ? "Deselect All"
-                                    : "Select All"}
-                            </Button>
-                            {selectedHarvests.length > 0 && (
-                                <>
-                                    <Button
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={handleBulkRestoreHarvests}
-                                        className="w-full text-green-600 sm:w-auto"
-                                    >
-                                        <RotateCcw className="mr-2 h-4 w-4" />
-                                        Restore Selected (
-                                        {selectedHarvests.length})
-                                    </Button>
-                                    <Button
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={
-                                            handleBulkPermanentDeleteHarvests
-                                        }
-                                        className="text-destructive w-full sm:w-auto"
-                                    >
-                                        <Trash className="mr-2 h-4 w-4" />
-                                        Delete Forever (
-                                        {selectedHarvests.length})
-                                    </Button>
-                                </>
-                            )}
-                        </div>
-                    )}
-
-                    {deletedHarvests.length === 0 ? (
-                        <div className="py-12 text-center">
-                            <Flower2 className="text-muted-foreground mx-auto mb-4 h-12 w-12" />
-                            <h3 className="mb-2 text-lg font-semibold">
-                                No deleted harvests
-                            </h3>
-                            <p className="text-muted-foreground">
-                                All your harvest records are safe and sound!
-                            </p>
-                        </div>
-                    ) : (
-                        <div className="space-y-4">
-                            {deletedHarvests.map((harvest) => (
-                                <div
-                                    key={harvest.id}
-                                    className="flex items-start gap-3"
-                                >
-                                    <Checkbox
-                                        checked={selectedHarvests.includes(
-                                            harvest.id
-                                        )}
-                                        onCheckedChange={(checked) =>
-                                            handleSelectHarvest(
-                                                harvest.id,
-                                                !!checked
-                                            )
-                                        }
-                                        aria-label="Select item"
-                                        className="mt-2"
-                                    />
-                                    <DeletedHarvestItem
-                                        harvest={harvest}
-                                        onRestore={handleRestoreHarvest}
-                                        onPermanentDelete={
-                                            handlePermanentDeleteHarvest
-                                        }
-                                    />
-                                </div>
-                            ))}
-                        </div>
-                    )}
-                </TabsContent>
-            </Tabs>
+                            );
+                        })}
+                    </div>
+                </>
+            )}
         </div>
     );
 }
