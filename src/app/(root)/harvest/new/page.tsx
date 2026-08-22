@@ -1,17 +1,27 @@
 import { HarvestForm } from "@/components/harvest-form";
+import {
+    Card,
+    CardContent,
+    CardDescription,
+    CardHeader,
+    CardTitle,
+} from "@/components/ui/card";
 
 export default function NewHarvestPage() {
     return (
-        <div className="container mx-auto max-w-4xl overflow-auto p-6">
-            <h1 className="mb-6 text-3xl font-bold text-green-700">
-                Log New Harvest
-            </h1>
-            <p className="text-muted-foreground mb-6">
-                {
-                    "Record what you've harvested from your garden. Keep track of quantities, quality, and more!"
-                }
-            </p>
-            <HarvestForm />
-        </div>
+        <Card className="garden-card sm:mt-12 md:mt-4">
+            <CardHeader>
+                <CardTitle className="text-primary text-3xl font-bold">
+                    Log New Harvest
+                </CardTitle>
+                <CardDescription>
+                    Record what you&apos;ve harvested from your garden. Keep
+                    track of quantities, quality, and more!
+                </CardDescription>
+            </CardHeader>
+            <CardContent>
+                <HarvestForm />
+            </CardContent>
+        </Card>
     );
 }
