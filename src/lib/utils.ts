@@ -1,4 +1,5 @@
 import { type ClassValue, clsx } from "clsx";
+import { format, isValid } from "date-fns";
 import { twMerge } from "tailwind-merge";
 
 export function cn(...inputs: ClassValue[]) {
@@ -107,3 +108,18 @@ export function downloadFile(
 }
 
 export const sortStrings = (a: string, b: string) => a.localeCompare(b);
+
+/**
+ * Safely formats a date value, returning a fallback if it's missing or invalid.
+ */
+export function formatDateSafe(
+    date: Date | string | number | null | undefined,
+    formatStr: string = "PPP 'at' p",
+    fallback: string = "Unknown"
+): string {
+    if (!date) return fallback;
+
+    const parsed = date instanceof Date ? date : new Date(date);
+
+    return isValid(parsed) ? format(parsed, formatStr) : fallback;
+}

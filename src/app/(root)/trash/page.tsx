@@ -22,22 +22,7 @@ import {
     Sprout,
     Flower2,
 } from "lucide-react";
-import { format, isValid } from "date-fns";
-
-/**
- * Safely formats a date value, returning a fallback if it's missing or invalid.
- */
-export function formatDateSafe(
-    date: Date | string | number | null | undefined,
-    formatStr: string = "PPP 'at' p",
-    fallback: string = "Unknown"
-): string {
-    if (!date) return fallback;
-
-    const parsed = date instanceof Date ? date : new Date(date);
-
-    return isValid(parsed) ? format(parsed, formatStr) : fallback;
-}
+import { formatDateSafe } from "@/lib/utils";
 
 const DeletedTaskItem = memo(function DeletedTaskItem({
     task,
