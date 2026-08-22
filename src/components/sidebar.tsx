@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { ThemeSwitcher } from "@/components/theme-switcher";
 import {
     LayoutDashboard,
@@ -16,6 +17,7 @@ import {
     Bot,
 } from "lucide-react";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
+import { useTaskStore } from "@/lib/task-store";
 
 // Garden quotes
 const gardenQuotes = [
@@ -30,7 +32,7 @@ const gardenQuotes = [
 
 const routes = [
     {
-        href: "/",
+        href: "/add",
         label: "Add Garden Entry",
         icon: <PlusCircle className="mr-2 size-5" />,
     },
@@ -45,7 +47,7 @@ const routes = [
         icon: <Flower2 className="mr-2 size-5" />,
     },
     {
-        href: "/dashboard",
+        href: "/",
         label: "Garden Stats",
         icon: <LayoutDashboard className="mr-2 size-5" />,
     },
@@ -75,6 +77,10 @@ const SidebarContent = memo(function SidebarContent({
     const [randomQuote] = useState(
         () => gardenQuotes[Math.floor(Math.random() * gardenQuotes.length)]
     );
+    const { tasks, harvests } = useTaskStore();
+    const deletedCount =
+        tasks.filter((task) => task.deleted).length +
+        harvests.filter((harvest) => harvest.deleted).length;
     const isActive = (route: string) => pathname === route;
     return (
         <>
@@ -101,6 +107,17 @@ const SidebarContent = memo(function SidebarContent({
                         <Link href={route.href}>
                             {route.icon}
                             {route.label}
+                            {route.href === "/trash" && deletedCount > 0 && (
+                                <Badge
+                                    variant="destructive"
+                                    className="ml-auto min-w-5 px-1.5 tabular-nums"
+                                >
+                                    {deletedCount}
+                                    <span className="sr-only">
+                                        items in the garbage bin
+                                    </span>
+                                </Badge>
+                            )}
                         </Link>
                     </Button>
                 ))}
@@ -151,7 +168,7 @@ export const Sidebar = memo(function Sidebar() {
                     className="fixed top-4 left-4 z-40 md:hidden"
                     onClick={() => setIsMobileMenuOpen(true)}
                 >
-                    <Menu className="h-6 w-6" />
+                    <Menu className="size-8 md:size-6" />
                 </Button>
 
                 <Sheet
