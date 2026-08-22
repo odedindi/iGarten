@@ -363,7 +363,7 @@ function DataTableComponent<T extends TableData>({
                     <Table>
                         <TableHeader className="bg-primary/10">
                             <TableRow>
-                                <TableHead className="text-primary-foreground/80 w-[40px] font-medium">
+                                <TableHead className="text-primary-foreground/80 w-10 font-medium">
                                     <Checkbox
                                         checked={
                                             allFilteredData.length > 0 &&
@@ -387,7 +387,7 @@ function DataTableComponent<T extends TableData>({
                                         )}
                                     </TableHead>
                                 ))}
-                                <TableHead className="text-primary-foreground/80 w-[80px] font-medium">
+                                <TableHead className="text-primary-foreground/80 w-20 font-medium">
                                     Actions
                                 </TableHead>
                             </TableRow>
@@ -469,7 +469,7 @@ function DataTableComponent<T extends TableData>({
                         <AlertDialogCancel>Cancel</AlertDialogCancel>
                         <AlertDialogAction
                             onClick={handleDeleteSelected}
-                            className="bg-destructive text-destructive-foreground"
+                            className="bg-destructive text-white"
                         >
                             Delete
                         </AlertDialogAction>
