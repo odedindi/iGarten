@@ -3,7 +3,5 @@ User-agent: *
 Allow: /
 
 # Sitemap location
-Sitemap: https://igarden3000.example.com/sitemap.xml
+Sitemap: https://igarten.odedo.dev/sitemap.xml
 
-# Disallow admin areas
-Disallow: /admin
